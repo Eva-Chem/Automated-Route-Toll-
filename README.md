@@ -159,13 +159,6 @@ GET /api/tolls-history
 
 ---
 
-## 🧪 Future Enhancements
-- WebSockets
-- Multi-zone logic
-- Analytics dashboard
-
----
-
 ## 📜 License
 Educational & demonstration use only.
 
@@ -173,3 +166,4 @@ Educational & demonstration use only.
 
 ## 👤 Author
 Automated Route Toll & Payment Tracker
+
