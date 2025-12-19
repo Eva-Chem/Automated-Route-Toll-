@@ -1,11 +1,15 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
+from routes.toll_zones import toll_zones_bp
 
 def create_app():
     app = Flask(__name__)
 
     # Enable CORS for frontend communication
     CORS(app)
+
+    # Register routes
+    app.register_blueprint(toll_zones_bp)
 
     # Health check route
     @app.route("/api/health", methods=["GET"])
