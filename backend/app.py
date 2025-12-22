@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from routes.toll_zones import toll_zones_bp
+from routes.check_zone import check_zone_bp
 
 def create_app():
     app = Flask(__name__)
@@ -10,6 +11,7 @@ def create_app():
 
     # Register routes
     app.register_blueprint(toll_zones_bp)
+    app.register_blueprint(check_zone_bp)
 
     # Health check route
     @app.route("/api/health", methods=["GET"])
