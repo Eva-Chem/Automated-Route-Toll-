@@ -2,6 +2,9 @@ import requests
 from requests.auth import HTTPBasicAuth
 import logging
 from .config import MpesaConfig
+import base64
+from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -126,4 +129,47 @@ class MpesaService:
         )
 
         response.raise_for_status()
+        return response.json()
+    
+    @staticmethod
+    def stk_push(phone_number, amount, account_reference="TollPayment"):
+        access_token = MpesaService.get_access_token()
+
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        password_str = (
+            MpesaConfig.STK_SHORTCODE +
+            MpesaConfig.PASSKEY +
+            timestamp
+        )
+
+        password = base64.b64encode(password_str.encode()).decode()
+
+        payload = {
+            "BusinessShortCode": MpesaConfig.STK_SHORTCODE,
+            "Password": password,
+            "Timestamp": timestamp,
+            "TransactionType": "CustomerPayBillOnline",
+            "Amount": amount,
+            "PartyA": phone_number,
+            "PartyB": MpesaConfig.STK_SHORTCODE,
+            "PhoneNumber": phone_number,
+            "CallBackURL": f"{MpesaConfig.BASE_URL}stk/callback",
+            "AccountReference": account_reference,
+            "TransactionDesc": "Route Toll Payment"
+        }
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(
+            MpesaConfig.STK_PUSH_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+
+        logger.info(f"STK Push Response: {response.text}")
         return response.json()

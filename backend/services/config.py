@@ -1,5 +1,7 @@
 import os
 from dotenv import load_dotenv
+import base64
+from datetime import datetime
 
 load_dotenv()
 
@@ -35,3 +37,10 @@ class MpesaConfig:
             raise ValueError("❌ Missing M-Pesa environment variables")
 
         print("✅ M-Pesa configuration loaded successfully")
+
+    @classmethod
+    def generate_password(cls):
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        data = cls.STK_SHORTCODE + cls.PASSKEY + timestamp
+        password = base64.b64encode(data.encode()).decode()
+        return password, timestamp

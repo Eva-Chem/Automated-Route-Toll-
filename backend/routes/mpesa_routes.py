@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import requests
-import base64
+import base64, json
 from datetime import datetime
 from services.config import MpesaConfig
 from services.mpesa_service import MpesaService
@@ -82,53 +82,51 @@ def simulate_c2b():
 
 
 # ---------------- STK PUSH ----------------
-@mpesa_bp.route("/stk-push", methods=["POST"])
+@mpesa_bp.route('/stk-push', methods=['POST'])
 def stk_push():
-    data = request.json
-    phone = data.get("phone")
-    amount = data.get("amount")
+    try:
+        data = request.get_json()
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    password = (
-        MpesaConfig.STK_SHORTCODE +
-        MpesaConfig.PASSKEY +
-        timestamp
-    )
+        phone = data.get("phone")
+        amount = data.get("amount")
 
-    encoded_password = base64.b64encode(password.encode()).decode()
+        if not phone or not amount:
+            return jsonify({
+                "success": False,
+                "error": "phone and amount required"
+            }), 400
 
-    token = get_access_token()
-    headers = {"Authorization": f"Bearer {token}"}
+        response = MpesaService.stk_push(
+            phone_number=phone,
+            amount=amount
+        )
 
-    payload = {
-        "BusinessShortCode": MpesaConfig.STK_SHORTCODE,
-        "Password": encoded_password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": amount,
-        "PartyA": phone,
-        "PartyB": MpesaConfig.STK_SHORTCODE,
-        "PhoneNumber": phone,
-        "CallBackURL": MpesaConfig.BASE_URL + "stk/callback",
-        "AccountReference": "RouteToll",
-        "TransactionDesc": "Route Toll Payment"
-    }
+        return jsonify({
+            "success": True,
+            "response": response
+        })
 
-    res = requests.post(
-        MpesaConfig.STK_PUSH_URL,
-        json=payload,
-        headers=headers
-    )
-
-    return jsonify(res.json())
+    except Exception as e:
+        logger.error(f"STK Push Error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 # ---------------- CALLBACKS ----------------
-@mpesa_bp.route("/stk/callback", methods=["POST"])
+@mpesa_bp.route('/stk/callback', methods=['POST'])
 def stk_callback():
     data = request.get_json()
-    print("📥 STK CALLBACK:", data)
+
+    logger.info("📥 STK Callback Received")
+    logger.info(json.dumps(data, indent=2))
+
+    with open("stk_callback.json", "a") as f:
+        f.write(json.dumps(data) + "\n")
+
     return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
+
 
 
 @mpesa_bp.route("/c2b/validate", methods=["POST"])
