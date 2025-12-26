@@ -6,8 +6,6 @@ from services.config import MpesaConfig
 from services.mpesa_service import MpesaService
 import logging
 
-logger = logging.getLogger(__name__)
-
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
@@ -72,7 +70,6 @@ def simulate_c2b():
         }), 200
 
     except Exception as e:
-        logger.error(f"C2B Simulation Error: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
@@ -107,7 +104,6 @@ def stk_push():
         })
 
     except Exception as e:
-        logger.error(f"STK Push Error: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
@@ -118,10 +114,7 @@ def stk_push():
 @mpesa_bp.route('/stk/callback', methods=['POST'])
 def stk_callback():
     data = request.get_json()
-
-    logger.info("📥 STK Callback Received")
-    logger.info(json.dumps(data, indent=2))
-
+    
     with open("stk_callback.json", "a") as f:
         f.write(json.dumps(data) + "\n")
 
