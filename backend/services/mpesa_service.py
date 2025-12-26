@@ -96,3 +96,34 @@ class MpesaService:
         except Exception as e:
             logger.error(f"❌ Unexpected error: {str(e)}")
             raise
+
+
+    @staticmethod
+    def simulate_c2b_payment(amount, phone_number, reference="TestPay"):
+        """
+        Simulate a C2B payment (SANDBOX ONLY)
+        """
+        access_token = MpesaService.get_access_token()
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "ShortCode": MpesaConfig.C2B_SHORTCODE,
+            "CommandID": "CustomerPayBillOnline",
+            "Amount": amount,
+            "Msisdn": phone_number,
+            "BillRefNumber": reference
+        }
+
+        response = requests.post(
+            MpesaConfig.C2B_SIMULATE_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+
+        response.raise_for_status()
+        return response.json()

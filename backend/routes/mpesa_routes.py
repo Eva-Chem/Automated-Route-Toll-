@@ -1,158 +1,143 @@
 from flask import Blueprint, request, jsonify
-import logging
-import json
 import requests
-from services.mpesa_service import MpesaService
+import base64
+from datetime import datetime
 from services.config import MpesaConfig
+from services.mpesa_service import MpesaService
+import logging
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
-# CHANGED: url_prefix from '/mpesa' to '/payments'
-mpesa_bp = Blueprint('mpesa', __name__, url_prefix='/payments')
+
+mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
 
-@mpesa_bp.route('/access-token', methods=['GET'])
 def get_access_token():
+    response = requests.get(
+        MpesaConfig.OAUTH_URL,
+        auth=(MpesaConfig.CONSUMER_KEY, MpesaConfig.CONSUMER_SECRET)
+    )
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+
+# ---------------- C2B REGISTER ----------------
+@mpesa_bp.route("/register-c2b", methods=["GET"])
+def register_c2b():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = {
+        "ShortCode": MpesaConfig.C2B_SHORTCODE,
+        "ResponseType": "Completed",
+        "ConfirmationURL": MpesaConfig.BASE_URL + "c2b/confirm",
+        "ValidationURL": MpesaConfig.BASE_URL + "c2b/validate"
+    }
+
+    res = requests.post(
+        MpesaConfig.C2B_REGISTER_URL,
+        json=payload,
+        headers=headers
+    )
+
+    return jsonify(res.json())
+
+@mpesa_bp.route('/c2b/simulate', methods=['POST'])
+def simulate_c2b():
     """
-    Get M-Pesa OAuth access token
-    
-    Returns:
-        JSON with access token or error message
+    Simulate a C2B payment (Sandbox only)
     """
     try:
-        logger.info("📞 Access token endpoint called")
-        
-        # Get access token from M-Pesa
-        access_token = MpesaService.get_access_token()
-        
+        data = request.get_json()
+
+        amount = data.get("amount")
+        phone = data.get("phone")
+        reference = data.get("reference", "TestPay")
+
+        if not amount or not phone:
+            return jsonify({
+                "success": False,
+                "error": "amount and phone are required"
+            }), 400
+
+        response = MpesaService.simulate_c2b_payment(
+            amount=amount,
+            phone_number=phone,
+            reference=reference
+        )
+
         return jsonify({
             "success": True,
-            "access_token": access_token
+            "response": response
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"❌ Error: {str(e)}")
+        logger.error(f"C2B Simulation Error: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
 
 
-@mpesa_bp.route('/register-urls', methods=['POST'])
-def register_urls():
-    """
-    Register C2B validation and confirmation URLs with M-Pesa
-    
-    Returns:
-        JSON with registration response
-    """
-    try:
-        logger.info("📝 Register URLs endpoint called")
-        
-        # Get access token
-        access_token = MpesaService.get_access_token()
-        
-        # Prepare request
-        endpoint = 'https://sandbox.safaricom.co.ke/mpesa/c2b/v2/registerurl'
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "ShortCode": MpesaConfig.SHORTCODE,
-            "ResponseType": "Completed",
-            "ConfirmationURL": f"{MpesaConfig.BASE_URL}c2b/confirm",
-            "ValidationURL": f"{MpesaConfig.BASE_URL}c2b/validate"
-        }
-        
-        logger.info(f"Registering URLs with payload: {json.dumps(payload, indent=2)}")
-        
-        # Make request to M-Pesa
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=30)
-        
-        logger.info(f"Response Status: {response.status_code}")
-        logger.info(f"Response: {response.text}")
-        
-        response_data = response.json()
-        
-        return jsonify({
-            "success": True,
-            "response": response_data
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"❌ Error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
 
 
-@mpesa_bp.route('/c2b/validate', methods=['POST'])
+# ---------------- STK PUSH ----------------
+@mpesa_bp.route("/stk-push", methods=["POST"])
+def stk_push():
+    data = request.json
+    phone = data.get("phone")
+    amount = data.get("amount")
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    password = (
+        MpesaConfig.STK_SHORTCODE +
+        MpesaConfig.PASSKEY +
+        timestamp
+    )
+
+    encoded_password = base64.b64encode(password.encode()).decode()
+
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = {
+        "BusinessShortCode": MpesaConfig.STK_SHORTCODE,
+        "Password": encoded_password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": amount,
+        "PartyA": phone,
+        "PartyB": MpesaConfig.STK_SHORTCODE,
+        "PhoneNumber": phone,
+        "CallBackURL": MpesaConfig.BASE_URL + "stk/callback",
+        "AccountReference": "RouteToll",
+        "TransactionDesc": "Route Toll Payment"
+    }
+
+    res = requests.post(
+        MpesaConfig.STK_PUSH_URL,
+        json=payload,
+        headers=headers
+    )
+
+    return jsonify(res.json())
+
+
+# ---------------- CALLBACKS ----------------
+@mpesa_bp.route("/stk/callback", methods=["POST"])
+def stk_callback():
+    data = request.get_json()
+    print("📥 STK CALLBACK:", data)
+    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+
+@mpesa_bp.route("/c2b/validate", methods=["POST"])
 def c2b_validate():
-    """
-    C2B validation callback - M-Pesa calls this to validate payments
-    
-    Returns:
-        JSON response to M-Pesa
-    """
-    try:
-        data = request.get_json()
-        logger.info("✅ C2B Validation callback received")
-        logger.info(f"Data: {json.dumps(data, indent=2)}")
-        
-        # Save to file for debugging
-        with open('data_validation.json', 'a') as f:
-            f.write(json.dumps(data, indent=2) + '\n')
-            f.write('\n' + '='*50 + '\n')
-        
-        # Return success response to M-Pesa
-        return jsonify({
-            "ResultCode": 0,
-            "ResultDesc": "Accepted"
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"❌ Validation error: {str(e)}")
-        return jsonify({
-            "ResultCode": 1,
-            "ResultDesc": "Rejected"
-        }), 200
+    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
 
 
-@mpesa_bp.route('/c2b/confirm', methods=['POST'])
+@mpesa_bp.route("/c2b/confirm", methods=["POST"])
 def c2b_confirm():
-    """
-    C2B confirmation callback - M-Pesa calls this to confirm payments
-    
-    Returns:
-        JSON response to M-Pesa
-    """
-    try:
-        data = request.get_json()
-        logger.info("✅ C2B Confirmation callback received")
-        logger.info(f"Data: {json.dumps(data, indent=2)}")
-        
-        # Save to file for debugging
-        with open('data_confirmation.json', 'a') as f:
-            f.write(json.dumps(data, indent=2) + '\n')
-            f.write('\n' + '='*50 + '\n')
-        
-        # Return success response to M-Pesa
-        return jsonify({
-            "ResultCode": 0,
-            "ResultDesc": "Accepted"
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"❌ Confirmation error: {str(e)}")
-        return jsonify({
-            "ResultCode": 1,
-            "ResultDesc": "Rejected"
-        }), 200
+    data = request.get_json()
+    print("💰 PAYMENT CONFIRMED:", data)
+    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
