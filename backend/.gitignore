@@ -43,7 +43,7 @@ ENV/
 # M-Pesa callback data files
 data_validation.json
 data_confirmation.json
-stk_callback.json
+stk_callbacks.json
 data_v.json
 data_c.json
 
