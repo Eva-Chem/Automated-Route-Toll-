@@ -11,16 +11,14 @@ from routes.auth_routes import auth_bp
 def create_app():
     app = Flask(__name__)
 
-    # ✅ Load JWT config
+    # JWT config
     app.config.from_object("config")
+    JWTManager(app)
 
-    # ✅ Initialize JWT
-    jwt = JWTManager(app)
-
-    # ✅ Enable CORS
+    # Enable CORS
     CORS(app)
 
-    # ✅ Register blueprints
+    # Register blueprints
     app.register_blueprint(toll_zones_bp)
     app.register_blueprint(check_zone_bp)
     app.register_blueprint(mpesa_bp)
@@ -40,6 +38,9 @@ def create_app():
     return app
 
 
+
+app = create_app()
+
+
 if __name__ == "__main__":
-    app = create_app()
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
