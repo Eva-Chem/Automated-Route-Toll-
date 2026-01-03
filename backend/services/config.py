@@ -12,8 +12,8 @@ class MpesaConfig:
     CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET", "")
     
     # Shortcodes
-    STK_SHORTCODE = os.getenv("MPESA_STK_SHORTCODE", "174379")
-    C2B_SHORTCODE = os.getenv("MPESA_C2B_SHORTCODE", "600383")
+    STK_SHORTCODE = str(os.getenv("MPESA_STK_SHORTCODE", "174379"))
+    C2B_SHORTCODE = str(os.getenv("MPESA_C2B_SHORTCODE", "600383"))
     
     # Passkey
     PASSKEY = os.getenv("MPESA_PASSKEY", "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919")
@@ -41,5 +41,5 @@ class MpesaConfig:
         if missing:
             raise ValueError(f"Missing required config: {', '.join(missing)}")
         
-        print(f"✅ M-Pesa Config: {cls.STK_SHORTCODE} | {cls.BASE_URL}")
+        print(f" M-Pesa Config: {cls.STK_SHORTCODE} | {cls.BASE_URL}")
         return True

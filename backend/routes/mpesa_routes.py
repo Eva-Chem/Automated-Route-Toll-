@@ -55,22 +55,48 @@ def stk_callback():
         callback_data = data.get("Body", {}).get("stkCallback", {})
         result_code = callback_data.get("ResultCode")
         
-        print(f"\n{'='*60}\nSTK PUSH CALLBACK: {result_code}\n{json.dumps(data, indent=2)}\n{'='*60}\n")
+        print(f"\n{'='*10}\nSTK PUSH CALLBACK: {result_code}\n{json.dumps(data, indent=2)}\n{'='*60}\n")
         
         if result_code == 0:
             print("Payment successful")
         else:
             print(f"Payment failed: {callback_data.get('ResultDesc')}")
 
-        with open('stk_callbacks.json', 'a') as f:
-            f.write(json.dumps(data, indent=2) + '\n\n')
+        # Append with comma separator for valid JSON array format
+        try:
+            # Read existing content
+            try:
+                with open('stk_callbacks.json', 'r') as f:
+                    content = f.read().strip()
+                    if content and not content.startswith('['):
+                        # File exists but not an array - convert it
+                        existing_data = []
+                    elif content:
+                        # Try to parse existing array
+                        try:
+                            existing_data = json.loads(content)
+                        except:
+                            existing_data = []
+                    else:
+                        existing_data = []
+            except FileNotFoundError:
+                existing_data = []
+            
+            # Append new callback
+            existing_data.append(data)
+            
+            # Write back as proper JSON array
+            with open('stk_callbacks.json', 'w') as f:
+                json.dump(existing_data, f, indent=2)
+                
+        except Exception as file_error:
+            print(f"Error writing to file: {str(file_error)}")
 
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
 
     except Exception as e:
         print(f"Error processing STK callback: {str(e)}")
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-
 
 @mpesa_bp.route("/c2b/validate", methods=["POST"])
 def c2b_validate():

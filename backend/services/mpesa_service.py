@@ -56,18 +56,19 @@ class MpesaService:
         access_token = MpesaService.get_access_token()
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         
+        shortcode = str(MpesaConfig.STK_SHORTCODE)
         # Generate password
         password_str = f"{MpesaConfig.STK_SHORTCODE}{MpesaConfig.PASSKEY}{timestamp}"
         password = base64.b64encode(password_str.encode()).decode()
         
         payload = {
-            "BusinessShortCode": MpesaConfig.STK_SHORTCODE,
+            "BusinessShortCode": shortcode,
             "Password": password,
             "Timestamp": timestamp,
             "TransactionType": "CustomerPayBillOnline",
             "Amount": int(amount),
             "PartyA": phone_number,
-            "PartyB": MpesaConfig.STK_SHORTCODE,
+            "PartyB": shortcode,
             "PhoneNumber": phone_number,
             "CallBackURL": f"{MpesaConfig.BASE_URL}stk/callback",
             "AccountReference": account_reference,
