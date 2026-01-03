@@ -44,6 +44,7 @@ ENV/
 data_validation.json
 data_confirmation.json
 stk_callbacks.json
+c2b_confirmations.json
 data_v.json
 data_c.json
 
