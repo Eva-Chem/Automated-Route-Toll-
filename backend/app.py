@@ -1,40 +1,49 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from db.database import init_db, get_db_connection
+from flask_jwt_extended import JWTManager
+from config import Config
+from db import init_db
 
-app = Flask(__name__)
-CORS(app)
-
-# Initialize database (creates tables + sample data)
-init_db()
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "Automated Route Toll Backend is running"})
+from routes.auth_routes import auth_bp
+from routes.mpesa_routes import mpesa_bp
+from routes.toll_zones import toll_zones_bp
+from routes.check_zone import check_zone_bp
 
 
-@app.route("/toll-zones", methods=["GET"])
-def get_toll_zones():
-    conn = get_db_connection()
-    cur = conn.cursor()
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    
+    # JWT config
+    JWTManager(app)
 
-    cur.execute("SELECT id, name, charge_amount, polygon FROM toll_zones;")
-    rows = cur.fetchall()
+    # Enable CORS
+    CORS(app)
 
-    cur.close()
-    conn.close()
+    # Initialize database
+    init_db(app)
 
-    zones = []
-    for row in rows:
-        zones.append({
-            "id": row[0],
-            "name": row[1],
-            "charge_amount": float(row[2]),
-            "polygon": row[3]
-        })
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(mpesa_bp, url_prefix="/api/mpesa")
+    app.register_blueprint(toll_zones_bp, url_prefix="/api/toll-zones")
+    app.register_blueprint(check_zone_bp, url_prefix="/api/check-zone")
 
-    return jsonify(zones)
+    @app.route("/", methods=["GET"])
+    def home():
+        return jsonify({
+            "message": "Automated Route Toll API",
+            "version": "1.0.0"
+        }), 200
+
+    @app.route("/api/health", methods=["GET"])
+    def health_check():
+        return jsonify({"status": "ok", "message": "Backend running"}), 200
+
+    return app
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app = create_app()
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
