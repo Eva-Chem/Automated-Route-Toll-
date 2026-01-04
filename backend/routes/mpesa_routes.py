@@ -49,55 +49,26 @@ def simulate_c2b():
 
 @mpesa_bp.route("/stk/callback", methods=["POST"])
 def stk_callback():
-    """Handle STK Push callback from M-Pesa"""
     try:
         data = request.get_json(force=True)
         callback_data = data.get("Body", {}).get("stkCallback", {})
         result_code = callback_data.get("ResultCode")
         
-        print(f"\n{'='*10}\nSTK PUSH CALLBACK: {result_code}\n{json.dumps(data, indent=2)}\n{'='*60}\n")
+        print("\n========== STK CALLBACK RECEIVED ==========")
+        print(json.dumps(data, indent=2))
+        print("==========================================")
         
         if result_code == 0:
-            print("Payment successful")
+            print("✅ PAYMENT SUCCESSFUL")
         else:
-            print(f"Payment failed: {callback_data.get('ResultDesc')}")
-
-        # Append with comma separator for valid JSON array format
-        try:
-            # Read existing content
-            try:
-                with open('stk_callbacks.json', 'r') as f:
-                    content = f.read().strip()
-                    if content and not content.startswith('['):
-                        # File exists but not an array - convert it
-                        existing_data = []
-                    elif content:
-                        # Try to parse existing array
-                        try:
-                            existing_data = json.loads(content)
-                        except:
-                            existing_data = []
-                    else:
-                        existing_data = []
-            except FileNotFoundError:
-                existing_data = []
-            
-            # Append new callback
-            existing_data.append(data)
-            
-            # Write back as proper JSON array
-            with open('stk_callbacks.json', 'w') as f:
-                json.dump(existing_data, f, indent=2)
-                
-        except Exception as file_error:
-            print(f"Error writing to file: {str(file_error)}")
-
+            print("❌ PAYMENT FAILED:", callback_data.get("ResultDesc"))
+        
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-
+    
     except Exception as e:
-        print(f"Error processing STK callback: {str(e)}")
+        print(f"❌ Error processing STK callback: {str(e)}")
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-
+    
 @mpesa_bp.route("/c2b/validate", methods=["POST"])
 def c2b_validate():
     """Validate C2B payment before processing"""
@@ -116,11 +87,10 @@ def c2b_confirm():
     """Confirm C2B payment"""
     try:
         data = request.get_json(force=True)
-        print(f"\n{'='*60}\n C2B PAYMENT CONFIRMED\n{json.dumps(data, indent=2)}\n{'='*60}\n")
-
-        with open('c2b_confirmations.json', 'a') as f:
-            f.write(json.dumps(data, indent=2) + '\n\n')
-
+        print("\n========== C2B PAYMENT CONFIRMED ==========")
+        print(json.dumps(data, indent=2))
+        print("==========================================")
+                
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
 
     except Exception as e:
