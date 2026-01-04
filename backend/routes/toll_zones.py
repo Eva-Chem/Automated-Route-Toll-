@@ -1,23 +1,27 @@
 from flask import Blueprint, jsonify
-from models.toll_zone import fetch_all_toll_zones
+from db import get_db_connection
 
 toll_zones_bp = Blueprint("toll_zones", __name__)
 
-@toll_zones_bp.route("/api/toll-zones", methods=["GET"])
+@toll_zones_bp.route("/", methods=["GET"])
 def get_toll_zones():
-    try:
-        toll_zones = fetch_all_toll_zones()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-        # Transform polygon data to coordinates format for frontend
-        for zone in toll_zones:
-            zone["coordinates"] = zone.pop("polygon")
+    cur.execute("SELECT id, name, charge_amount, polygon FROM toll_zones;")
+    rows = cur.fetchall()
 
-        return jsonify({
-            "success": True,
-            "data": toll_zones
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+    cur.close()
+    conn.close()
+
+    zones = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "charge_amount": float(row[2]),
+            "polygon": row[3]
+        }
+        for row in rows
+    ]
+
+    return jsonify(zones), 200

@@ -1,53 +1,54 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-<<<<<<< HEAD
-=======
-from db.database import init_db, get_db_connection
->>>>>>> 80d0f6c (Backend: Flask app, PostgreSQL setup, toll zones API, cleanup)
+from flask_jwt_extended import JWTManager
 
-app = Flask(__name__)
-CORS(app)
+from config import Config
+from db import init_db
 
-# Initialize database (creates tables + sample data)
-init_db()
+from routes.auth_routes import auth_bp
+from routes.mpesa_routes import mpesa_bp
+from routes.toll_zones import toll_zones_bp
+from routes.check_zone import check_zone_bp
 
-<<<<<<< HEAD
-    # Health check route
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    # Enable CORS
+    CORS(app)
+
+    # JWT configuration
+    JWTManager(app)
+
+    # Initialize database
+    init_db(app)
+
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(mpesa_bp, url_prefix="/api/mpesa")
+    app.register_blueprint(toll_zones_bp, url_prefix="/api/toll-zones")
+    app.register_blueprint(check_zone_bp, url_prefix="/api/check-zone")
+
+    # Root route
+    @app.route("/", methods=["GET"])
+    def home():
+        return jsonify({
+            "message": "Automated Route Toll API",
+            "version": "1.0.0"
+        }), 200
+
+    # Health check
     @app.route("/api/health", methods=["GET"])
     def health_check():
         return jsonify({
             "status": "ok",
             "message": "Backend running"
         }), 200
-=======
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "Automated Route Toll Backend is running"})
 
->>>>>>> 80d0f6c (Backend: Flask app, PostgreSQL setup, toll zones API, cleanup)
-
-@app.route("/toll-zones", methods=["GET"])
-def get_toll_zones():
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("SELECT id, name, charge_amount, polygon FROM toll_zones;")
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    zones = []
-    for row in rows:
-        zones.append({
-            "id": row[0],
-            "name": row[1],
-            "charge_amount": float(row[2]),
-            "polygon": row[3]
-        })
-
-    return jsonify(zones)
+    return app
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app = create_app()
+    app.run(host="0.0.0.0", port=5000, debug=True)
