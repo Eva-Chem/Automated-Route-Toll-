@@ -3,7 +3,8 @@ from models.toll_zone import fetch_all_toll_zones
 
 toll_zones_bp = Blueprint("toll_zones", __name__)
 
-@toll_zones_bp.route("/api/toll-zones", methods=["GET"])
+@toll_zones_bp.route("/", methods=["GET"])
+
 def get_toll_zones():
     try:
         toll_zones = fetch_all_toll_zones()
