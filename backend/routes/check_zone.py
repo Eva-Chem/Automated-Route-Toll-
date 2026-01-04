@@ -1,13 +1,17 @@
 from flask import Blueprint, request, jsonify
-from services.geo_fencing import check_zone_status
+from flask_jwt_extended import jwt_required
+from services.geo_fencing import check_point_in_zone
+from models.toll_zone import TollZone
 
 check_zone_bp = Blueprint("check_zone", __name__)
 
-@check_zone_bp.route("/api/check-zone", methods=["POST"])
+@check_zone_bp.route("/check-zone", methods=["POST"])
+@jwt_required()
 def check_zone():
     """
     Endpoint to check if driver coordinates are inside a toll zone.
     Expected payload: {"lat": float, "lng": float}
+    Requires JWT authentication (Driver/Operator role).
     """
     try:
         data = request.get_json()
@@ -19,30 +23,32 @@ def check_zone():
                 "error": "Missing required fields: lat and lng"
             }), 400
         
-        lat = float(data["lat"])
-        lng = float(data["lng"])
+        lat = float(data['lat'])
+        driver_lng = float(data['lng'])
         
         # Validate coordinate ranges
-        if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        if not (-90 <= lat <= 90) or not (-180 <= driver_lng <= 180):
             return jsonify({
                 "success": False,
                 "error": "Invalid coordinates"
             }), 400
         
-        # Check zone status
-        result = check_zone_status(lat, lng)
+        # Check all toll zones
+        zones = TollZone.query.all()
+        
+        for zone in zones:
+            if check_point_in_zone(lat, driver_lng, zone.polygon_coords):
+                return jsonify({
+                    "success": True,
+                    "in_zone": True,
+                    "zone_name": zone.name,
+                    "charge": zone.charge_amount,
+                    "zone_id": zone.zone_id
+                }), 200
         
         return jsonify({
             "success": True,
-            "data": {
-                "inside_zone": result["inside_zone"],
-                "status": result["status"],
-                "zone": result["zone"],
-                "coordinates": {
-                    "lat": lat,
-                    "lng": lng
-                }
-            }
+            "in_zone": False
         }), 200
         
     except ValueError:
@@ -55,3 +61,4 @@ def check_zone():
             "success": False,
             "error": str(e)
         }), 500
+
