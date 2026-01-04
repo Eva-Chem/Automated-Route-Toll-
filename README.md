@@ -185,7 +185,8 @@ GET /api/tolls-history
 
 6. **Deploy**
 
-7. **Copy your backend URL** (e.g., `https://toll-tracker-api.onrender.com`)
+7. **Backend URL** - `https://automated-route-toll.onrender.com`
+`)
 
 ---
 
@@ -261,3 +262,4 @@ Educational & demonstration use only.
 **Automated Route Toll & Payment Tracker**
 
 For questions or support, please open an issue on GitHub.
+
