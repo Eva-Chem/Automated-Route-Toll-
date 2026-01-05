@@ -10,7 +10,7 @@ def check_point_in_zone(lat, lng, polygon_coords):
         polygon_coords: List of dicts with 'lat' and 'lng' keys
         
     Returns:
-        bool: True if point is inside the polygon
+        bool: True if point is inside the polygon or on its boundary
     """
     try:
         # 1. Create the point using (lat, lng) order for consistency
@@ -22,7 +22,9 @@ def check_point_in_zone(lat, lng, polygon_coords):
         
         # 3. Create polygon and check
         polygon = Polygon(coords_tuple)
-        return polygon.contains(point)
+        
+        # 4. Check if point is inside or on boundary (touches the polygon)
+        return polygon.contains(point) or polygon.touches(point)
     except Exception as e:
         print(f"Geo-fencing error: {e}")
         return False

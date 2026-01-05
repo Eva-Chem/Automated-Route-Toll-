@@ -47,6 +47,7 @@ class TollPayment(db.Model):
         self.amount = amount
         self.checkout_request_id = checkout_request_id
         self.status = status
+        self.created_at = datetime.utcnow()
 
     def to_dict(self):
         return {
