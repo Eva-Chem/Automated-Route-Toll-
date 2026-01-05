@@ -1,39 +1,29 @@
 from shapely.geometry import Point, Polygon
 
-def is_point_inside_zone(lat, lng, polygon):
-    polygon_points = [
-        (point["lng"], point["lat"])
-        for point in polygon
-    ]
-
-    zone_polygon = Polygon(polygon_points)
-    vehicle_point = Point(lng, lat)
-
-    return zone_polygon.contains(vehicle_point)
-
-def check_zone_status(lat, lng):
+def check_point_in_zone(lat, lng, polygon_coords):
     """
-    Check if coordinates are inside any toll zone.
-    Returns the zone info and entry/exit status.
-    """
-    toll_zones = fetch_all_toll_zones()
+    Checks if coordinates are inside a list of lat/lng dictionaries.
     
-    for zone in toll_zones:
-        polygon = zone["polygon"]
+    Args:
+        lat: Latitude of the point
+        lng: Longitude of the point
+        polygon_coords: List of dicts with 'lat' and 'lng' keys
         
-        if is_point_inside_zone(lat, lng, polygon):
-            return {
-                "inside_zone": True,
-                "status": "entry",
-                "zone": {
-                    "id": zone["id"],
-                    "name": zone["name"],
-                    "charge_amount": zone["charge_amount"]
-                }
-            }
-    
-    return {
-        "inside_zone": False,
-        "status": "exit",
-        "zone": None
-    }
+    Returns:
+        bool: True if point is inside the polygon
+    """
+    try:
+        # 1. Create the point using (lat, lng) order for consistency
+        point = Point(lat, lng)
+        
+        # 2. Convert list of dicts to list of tuples for Shapely
+        # Ensure we use (lat, lng) order consistently
+        coords_tuple = [(c['lat'], c['lng']) for c in polygon_coords]
+        
+        # 3. Create polygon and check
+        polygon = Polygon(coords_tuple)
+        return polygon.contains(point)
+    except Exception as e:
+        print(f"Geo-fencing error: {e}")
+        return False
+

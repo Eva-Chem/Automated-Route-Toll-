@@ -1,68 +1,131 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
+from middlewares.auth import admin_required, operator_required
+from models.toll_zone import TollZone, db
 
 toll_zones_bp = Blueprint("toll_zones", __name__)
 
-@toll_zones_bp.route("/api/toll-zones", methods=["GET"])
+@toll_zones_bp.route("/", methods=["GET"])
+@jwt_required()
+@operator_required
 def get_toll_zones():
-    toll_zones = [
-        {
-            "id": 1,
-            "name": "Westlands Toll",
-            "charge_amount": 200,
-            "coordinates": [
-                {"lat": -1.2675, "lng": 36.8123},
-                {"lat": -1.2680, "lng": 36.8140},
-                {"lat": -1.2660, "lng": 36.8150},
-                {"lat": -1.2655, "lng": 36.8130}
-            ]
-        },
-        {
-            "id": 2,
-            "name": "Upperhill Toll",
-            "charge_amount": 150,
-            "coordinates": [
-                {"lat": -1.2920, "lng": 36.8195},
-                {"lat": -1.2925, "lng": 36.8210},
-                {"lat": -1.2905, "lng": 36.8220},
-                {"lat": -1.2900, "lng": 36.8205}
-            ]
-        },
-        {
-            "id": 3,
-            "name": "Thika Road Toll",
-            "charge_amount": 180,
-            "coordinates": [
-                {"lat": -1.2355, "lng": 36.8635},
-                {"lat": -1.2360, "lng": 36.8655},
-                {"lat": -1.2340, "lng": 36.8665},
-                {"lat": -1.2335, "lng": 36.8645}
-            ]
-        },
-        {
-            "id": 4,
-            "name": "Mombasa Road Toll",
-            "charge_amount": 170,
-            "coordinates": [
-                {"lat": -1.3145, "lng": 36.8525},
-                {"lat": -1.3150, "lng": 36.8545},
-                {"lat": -1.3130, "lng": 36.8555},
-                {"lat": -1.3125, "lng": 36.8535}
-            ]
-        },
-        {
-            "id": 5,
-            "name": "Waiyaki Way Toll",
-            "charge_amount": 160,
-            "coordinates": [
-                {"lat": -1.2615, "lng": 36.7505},
-                {"lat": -1.2620, "lng": 36.7525},
-                {"lat": -1.2600, "lng": 36.7535},
-                {"lat": -1.2595, "lng": 36.7515}
-            ]
-        }
-    ]
-
+    """Get all toll zones - accessible by admin and operator"""
+    zones = TollZone.query.all()
+    
     return jsonify({
         "success": True,
-        "data": toll_zones
-    })
+        "data": [zone.to_dict() for zone in zones]
+    }), 200
+
+
+@toll_zones_bp.route("/", methods=["POST"])
+@jwt_required()
+@admin_required
+def create_toll_zone():
+    """Create new toll zone - admin only"""
+    data = request.get_json()
+    
+    if not data or "name" not in data or "charge_amount" not in data or "polygon_coords" not in data:
+        return jsonify({
+            "success": False,
+            "error": "Missing required fields: name, charge_amount, polygon_coords"
+        }), 400
+    
+    try:
+        new_zone = TollZone(
+            name=data['name'],
+            charge_amount=int(data['charge_amount']),
+            polygon_coords=data['polygon_coords']
+        )
+        db.session.add(new_zone)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "msg": "Zone created",
+            "id": new_zone.zone_id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@toll_zones_bp.route("/<string:zone_id>", methods=["PUT"])
+@jwt_required()
+@admin_required
+def update_toll_zone(zone_id):
+    """Update toll zone - admin only"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({
+            "success": False,
+            "error": "No data provided"
+        }), 400
+    
+    zone = TollZone.query.filter_by(zone_id=zone_id).first()
+    
+    if not zone:
+        return jsonify({
+            "success": False,
+            "error": "Toll zone not found"
+        }), 404
+    
+    try:
+        if "name" in data:
+            zone.name = data["name"]
+        if "charge_amount" in data:
+            zone.charge_amount = int(data["charge_amount"])
+        if "polygon_coords" in data:
+            zone.polygon_coords = data["polygon_coords"]
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "msg": "Toll zone updated successfully",
+            "zone": zone.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@toll_zones_bp.route("/<string:zone_id>", methods=["DELETE"])
+@jwt_required()
+@admin_required
+def delete_toll_zone(zone_id):
+    """Delete toll zone - admin only"""
+    zone = TollZone.query.filter_by(zone_id=zone_id).first()
+    
+    if not zone:
+        return jsonify({
+            "success": False,
+            "error": "Toll zone not found"
+        }), 404
+    
+    try:
+        db.session.delete(zone)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "msg": "Toll zone deleted successfully",
+            "id": zone_id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-import json
+from flask_jwt_extended import jwt_required
 from services.mpesa_service import MpesaService
 from services.config import MpesaConfig
 
@@ -7,8 +7,9 @@ mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
 
 @mpesa_bp.route('/stk-push', methods=['POST'])
+@jwt_required()
 def stk_push():
-    """Initiate STK Push payment"""
+    """Initiate STK Push payment - requires authentication"""
     try:
         data = request.get_json()
         phone = data.get("phone")
@@ -25,8 +26,9 @@ def stk_push():
 
 
 @mpesa_bp.route('/c2b/simulate', methods=['POST'])
+@jwt_required()
 def simulate_c2b():
-    """Simulate C2B payment (Sandbox only)"""
+    """Simulate C2B payment (Sandbox only) - requires authentication"""
     try:
         data = request.get_json()
         amount = data.get("amount")
