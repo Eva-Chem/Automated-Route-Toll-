@@ -9,6 +9,7 @@ from routes.auth_routes import auth_bp
 from routes.mpesa_routes import mpesa_bp
 from routes.toll_zones import toll_zones_bp
 from routes.check_zone import check_zone_bp
+from routes.payment_routes import payment_bp
 
 def create_app():
     app = Flask(__name__)
@@ -39,6 +40,7 @@ def create_app():
     app.register_blueprint(mpesa_bp, url_prefix="/api/mpesa")
     app.register_blueprint(toll_zones_bp, url_prefix="/api/toll-zones")
     app.register_blueprint(check_zone_bp, url_prefix="/api")
+    app.register_blueprint(payment_bp, url_prefix="/api")
 
     @app.route("/", methods=["GET"])
     def home():

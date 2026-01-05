@@ -1,55 +1,64 @@
-# Backend Task 2: Role-Based Authorization Middleware
+# Backend Implementation Plan - Toll Zone System
 
-## Status: ✅ JWT Already Includes Role
+## 📊 Information Gathered
 
-## Plan to Implement
+### Current State Analysis
 
-### 1️⃣ Create Middleware Directory and Decorator
-- [ ] Create `middlewares/` directory
-- [ ] Create `middlewares/__init__.py`
-- [ ] Create `middlewares/roles.py` with @admin_required decorator
+| Component | File | Status | Notes |
+|-----------|------|--------|-------|
+| **Toll Zone Model** | `models/toll_zone.py` | ✅ Complete | Has TollZone and TollPayment models with proper methods |
+| **Auth Middleware** | `middlewares/auth.py` | ✅ Complete | Has `admin_required` and `operator_required` decorators |
+| **Geo-Fencing Service** | `services/geo_fencing.py` | ✅ Complete | Has `check_point_in_zone` function using Shapely |
+| **Check Zone Route** | `routes/check_zone.py` | ✅ Complete | Has `/api/check-zone` endpoint |
+| **Toll Zones CRUD** | `routes/toll_zones.py` | ✅ Complete | Full CRUD with role-based access |
+| **Database Setup** | `db/database.py` | ✅ Complete | Has init_db and auto-seeding |
+| **Flask App** | `app.py` | ✅ Complete | Full app setup with JWT, CORS, blueprints |
 
-### 2️⃣ Update Routes with Role Protection
-- [ ] Update `routes/toll_zones.py` - Add @admin_required to create/update/delete routes
-- [ ] Update `routes/auth_routes.py` - Already done ✅
-- [ ] Update other routes as needed
+### Missing Dependencies
+- **shapely** is used in `services/geo_fencing.py` but NOT listed in `requirements.txt`
 
-### 3️⃣ Test the Implementation
-- [ ] Create test script to verify admin vs operator access
+### Missing Features
+- **TollPayment routes** - No API endpoints for payment management
+- **Test file** - `test_all_tasks.py` referenced but doesn't exist
 
-## Implementation Details
+---
 
-### File: middlewares/roles.py
-```python
-from functools import wraps
-from flask import jsonify
-from flask_jwt_extended import verify_jwt_in_request, get_jwt
+## 🎯 Plan
 
-def admin_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        verify_jwt_in_request()
-        claims = get_jwt()
-        role = claims.get("role")
-        
-        if role != "admin":
-            return jsonify({
-                "message": "Forbidden: Admin access required"
-            }), 403
-        
-        return fn(*args, **kwargs)
-    return wrapper
-```
+### Step 1: Add Missing Dependency (CRITICAL)
+**File:** `requirements.txt`
+- Add `shapely` to the requirements list
 
-### Protected Routes Examples:
-- `POST /api/toll-zones` → @jwt_required + @admin_required
-- `DELETE /api/toll-zones/<id>` → @jwt_required + @admin_required  
-- `GET /api/toll-zones` → @jwt_required (admin & operator)
+### Step 2: Create TollPayment Routes
+**File:** `routes/payment_routes.py`
+- Create GET endpoint for payment history
+- Create POST endpoint for recording payments
+- Add admin-only DELETE endpoint for payments
 
-## Expected Behavior:
-- ✅ Admin: Full access to all routes
-- ⚠️ Operator: Blocked from admin routes (403)
-- ❌ No token: Blocked (401)
+### Step 3: Create Comprehensive Test Suite
+**File:** `test_all_tasks.py`
+- Test geo-fencing logic with Shapely
+- Test role-based access control
+- Test API endpoints
+- Test model functionality
 
-## Ready to Proceed?
+### Step 4: Update App Registration
+**File:** `app.py`
+- Register the new payment blueprint
+
+---
+
+## 📝 Dependent Files to be Edited
+
+1. `requirements.txt` - Add shapely dependency
+2. `routes/payment_routes.py` - Create new file
+3. `app.py` - Register new blueprint
+
+---
+
+## ✅ Followup Steps
+
+1. Run `pip install shapely` to install the missing dependency
+2. Run the test suite to verify all components work together
+3. Test the API endpoints with a tool like Postman or curl
 
