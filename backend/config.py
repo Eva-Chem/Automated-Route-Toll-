@@ -1,20 +1,27 @@
 import os
+from dotenv import load_dotenv
+
+# Load .env
+load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-
-    JWT_SECRET_KEY = os.getenv(
-        "JWT_SECRET_KEY",
-        "super-secret-key-change-this"
-    )
-
-    # Use Render database URL in production, local for development
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:password@localhost:5432/toll_tracker"
-    )
-
+    # Database
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-# Base URL for the deployed API (Render)
-API_BASE_URL = "https://automated-route-toll.onrender.com"
+    # JWT
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-secret-jwt-key-change-in-prod")
+
+    # Flask
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-flask-secret-key-change-in-prod")
+    FLASK_ENV = os.environ.get("FLASK_ENV", "development")
+
+    # CORS
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+
+    # M-Pesa placeholders
+    MPESA_CONSUMER_KEY = os.environ.get("MPESA_CONSUMER_KEY", "")
+    MPESA_CONSUMER_SECRET = os.environ.get("MPESA_CONSUMER_SECRET", "")
+    MPESA_SHORTCODE = os.environ.get("MPESA_SHORTCODE", "")
+    MPESA_PASSKEY = os.environ.get("MPESA_PASSKEY", "")
+    MPESA_CALLBACK_URL = os.environ.get("MPESA_CALLBACK_URL", "")
