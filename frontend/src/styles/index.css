@@ -1,0 +1,23 @@
+/*@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.nav-link {
+  @apply block p-2 rounded hover:bg-slate-100;
+}
+.page-title {
+  @apply text-2xl font-semibold mb-6;
+}
+.card {
+  @apply bg-white p-4 rounded shadow;
+}
+.input {
+  @apply border p-2 rounded w-full;
+}
+.btn-primary {
+  @apply bg-blue-600 text-white p-2 rounded;
+}
+.btn-danger {
+  @apply bg-red-600 text-white p-2 rounded;
+}
+*/
