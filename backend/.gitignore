@@ -22,16 +22,30 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+<<<<<<< HEAD
 
 # Virtual Environment
 env/
 venv/
 ENV/
 .venv
+=======
+>>>>>>> riyan-backend
 
-# Environment variables
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
 .env
 .env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -39,6 +53,7 @@ ENV/
 *.swp
 *.swo
 *~
+<<<<<<< HEAD
 
 # M-Pesa callback data files
 data_validation.json
@@ -47,6 +62,17 @@ stk_callbacks.json
 c2b_confirmations.json
 data_v.json
 data_c.json
+=======
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+>>>>>>> riyan-backend
 
 # OS
 .DS_Store
