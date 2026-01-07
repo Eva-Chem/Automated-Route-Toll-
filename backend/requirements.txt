@@ -6,10 +6,11 @@ Flask-JWT-Extended==4.6.0
 
 # Database
 psycopg2-binary==2.9.9
-SQLAlchemy==2.0.23
+SQLAlchemy==2.0.36
 
 # Geo-Fencing
 Shapely==2.0.2
+
 
 # Security
 Werkzeug==3.0.1

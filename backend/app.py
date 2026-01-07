@@ -1,6 +1,6 @@
 """
 Flask application factory
-File: backend/app.py
+File: app.py
 """
 
 import os
@@ -53,4 +53,6 @@ def create_app(config_name=None):
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True, host="0.0.0.0", port=5000)
+
+
 
