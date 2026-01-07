@@ -10,9 +10,17 @@ export default function Sidebar() {
 
       <ul className="nav flex-column gap-2">
         {user.role === "admin" && (
-          <li className="nav-item">
-            <Link className="nav-link" to="/dashboard">Dashboard</Link>
-          </li>
+          <>
+            <li className="nav-item">
+              <Link className="nav-link" to="/dashboard">Dashboard</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/dashboard/transactions">Transactions</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/dashboard/zones">Toll Zones</Link>
+            </li>
+          </>
         )}
 
         {user.role === "operator" && (

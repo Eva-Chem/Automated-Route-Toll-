@@ -1,9 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import RequireRole from "../auth/RequireRole";
 import AdminDashboard from "../admin/AdminDashboard";
+import Transactions from "../admin/Transactions";
 import OperatorDashboard from "../operator/OperatorDashboard";
 import TollZones from "../operator/TollZones";
 import { useAuth } from "../auth/auth.context";
+import Login from "../auth/Login";
 
 function HomeRedirect() {
   const { user } = useAuth();
@@ -25,6 +27,24 @@ export default function Router() {
       />
 
       <Route
+        path="/dashboard/transactions"
+        element={
+          <RequireRole allow={["admin"]}>
+            <Transactions />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/dashboard/zones"
+        element={
+          <RequireRole allow={["admin"]}>
+            <TollZones />
+          </RequireRole>
+        }
+      />
+
+      <Route
         path="/operator"
         element={
           <RequireRole allow={["operator"]}>
@@ -32,6 +52,7 @@ export default function Router() {
           </RequireRole>
         }
       />
+      <Route path="/login" element={<Login />} />
 
       <Route
         path="/operator/zones"
