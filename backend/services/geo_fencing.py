@@ -8,7 +8,7 @@ def check_point_in_zone(lat, lng, polygon_coords):
         lat: Latitude of the point
         lng: Longitude of the point
         polygon_coords: List of dicts with 'lat' and 'lng' keys
-        
+        c
     Returns:
         bool: True if point is inside the polygon or on its boundary
     """
