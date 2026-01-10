@@ -16,9 +16,13 @@ def create_app(config_name=None):
     # -------------------------
     from routes.test_routes import test_bp
     from routes.toll_zones import toll_zones_bp
+    from routes.tolls_history import tolls_history_bp
+
 
     app.register_blueprint(test_bp, url_prefix='/api')
     app.register_blueprint(toll_zones_bp)   # already has /api in routes
+    app.register_blueprint(tolls_history_bp)
+
     
     # -------------------------
     # Health & Root
