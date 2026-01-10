@@ -1,34 +1,41 @@
 from flask import Blueprint, request, jsonify
-from services.geo_fencing import check_point_in_zone
 from models.models import TollZone
 
-geo_fencing_bp = Blueprint(
-    "geo_fencing",
-    __name__,
-    url_prefix="/api"
-)
+geo_fencing_bp = Blueprint("geo_fencing_bp", __name__)
 
 @geo_fencing_bp.route("/check-zone", methods=["POST"])
 def check_zone():
+    # import inside function to avoid circular import
+    from services.geo_fencing import check_point_in_zone
+
     data = request.get_json()
+
     lat = data.get("lat")
     lng = data.get("lng")
 
-    zones = TollZone.query.all()
+    if lat is None or lng is None:
+        return jsonify({
+            "success": False,
+            "message": "lat and lng are required"
+        }), 400
+
+    zones = TollZone.query.filter_by(is_active=True).all()
 
     for zone in zones:
-        if check_point_in_zone(lat, lng, zone.coordinates):
+        inside = check_point_in_zone(
+            lat,
+            lng,
+            zone.polygon_coords
+        )
+
+        if inside:
             return jsonify({
                 "success": True,
                 "inside_zone": True,
-                "zone": {
-                    "id": zone.id,
-                    "name": zone.name,
-                    "charge_amount": zone.charge_amount
-                }
-            })
+                "zone": zone.to_dict()
+            }), 200
 
     return jsonify({
         "success": True,
         "inside_zone": False
-    })
+    }), 200

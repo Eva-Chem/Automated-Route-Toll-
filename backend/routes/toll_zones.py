@@ -27,7 +27,6 @@ def get_toll_zones():
 # CREATE toll zone (Operator/Admin)
 # --------------------------------
 @toll_zones_bp.route("/toll-zones", methods=["POST"])
-@jwt_required()
 def create_toll_zone():
     try:
         data = request.get_json()
