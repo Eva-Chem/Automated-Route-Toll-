@@ -1,16 +1,3 @@
-"""
-Main Application Entry Point
-File: backend/app.py
-"""
-
-from flask import Flask
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-from config import config
-from models.models import db
-import os
-
-
 def create_app(config_name=None):
     """Application factory pattern"""
     if config_name is None:
@@ -19,17 +6,29 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config['default']))
     
+    # Init extensions
     db.init_app(app)
+    JWTManager(app)
+    CORS(app)
     
-    jwt = JWTManager(app)
-    
-    # Register test routes
+    # -------------------------
+    # Register Blueprints
+    # -------------------------
     from routes.test_routes import test_bp
+    from routes.toll_zones import toll_zones_bp
+
     app.register_blueprint(test_bp, url_prefix='/api')
+    app.register_blueprint(toll_zones_bp)   # already has /api in routes
     
+    # -------------------------
+    # Health & Root
+    # -------------------------
     @app.route('/health', methods=['GET'])
     def health_check():
-        return {'status': 'healthy', 'message': 'Toll Tracker API is running'}, 200
+        return {
+            'status': 'healthy',
+            'message': 'Toll Tracker API is running'
+        }, 200
     
     @app.route('/', methods=['GET'])
     def index():
@@ -40,10 +39,3 @@ def create_app(config_name=None):
         }, 200
 
     return app
-
-# Create the final app object
-app = create_app()
-
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
