@@ -12,38 +12,49 @@ import os
 
 
 def create_app(config_name=None):
-    """Application factory pattern"""
+
     if config_name is None:
-        config_name = os.getenv('FLASK_ENV', 'development')
-    
+        config_name = os.getenv("FLASK_ENV", "development")
+
     app = Flask(__name__)
-    app.config.from_object(config.get(config_name, config['default']))
-    
+    app.config.from_object(config.get(config_name, config["default"]))
+
+    # Enable CORS
+    CORS(app)
+
+    # Init extensions
     db.init_app(app)
-    
-    jwt = JWTManager(app)
-    
-    # Register test routes
+    JWTManager(app)
+
+    # -------------------------
+    # Register Blueprints
+    # -------------------------
     from routes.test_routes import test_bp
-    app.register_blueprint(test_bp, url_prefix='/api')
-    
-    @app.route('/health', methods=['GET'])
-    def health_check():
-        return {'status': 'healthy', 'message': 'Toll Tracker API is running'}, 200
-    
-    @app.route('/', methods=['GET'])
+    from routes.toll_zones import toll_zones_bp
+    from routes.geo_fencing_routes import geo_fencing_bp
+
+    app.register_blueprint(test_bp, url_prefix="/api")
+    app.register_blueprint(toll_zones_bp, url_prefix="/api")
+    app.register_blueprint(geo_fencing_bp, url_prefix="/api")
+
+    # -------------------------
+    # Health & Root
+    # -------------------------
+    @app.route("/health")
+    def health():
+        return {"status": "healthy"}, 200
+
+    @app.route("/")
     def index():
         return {
             "status": "online",
-            "message": "Automated Route Toll API is running",
-            "environment": os.getenv('FLASK_ENV', 'development')
+            "message": "Automated Route Toll API running"
         }, 200
 
     return app
 
-# Create the final app object
+
 app = create_app()
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
