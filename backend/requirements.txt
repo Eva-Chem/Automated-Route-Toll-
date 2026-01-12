@@ -1,8 +1,26 @@
-blinker==1.9.0
-click==8.3.1
-Flask==3.1.2
-flask-cors==6.0.2
-itsdangerous==2.2.0
-Jinja2==3.1.6
-MarkupSafe==3.0.3
-Werkzeug==3.1.4
+# Flask Framework
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-CORS==4.0.0
+Flask-JWT-Extended==4.6.0
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.36
+
+# Geo-Fencing
+Shapely==2.0.2
+
+
+# Security
+Werkzeug==3.0.1
+python-dotenv==1.0.0
+
+# HTTP Requests (for M-Pesa)
+requests==2.31.0
+
+# Production Server
+gunicorn==21.2.0
+
+# Utilities
+python-dateutil==2.8.2
