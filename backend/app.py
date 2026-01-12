@@ -3,6 +3,19 @@ Main Application Entry Point
 File: backend/app.py
 """
 
+import os
+from flask import Flask
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+from config import config
+from models.models import db
+
+
+"""
+Main Application Entry Point
+File: backend/app.py
+"""
+
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -14,6 +27,8 @@ import os
 def create_app(config_name=None):
 
     if config_name is None:
+        config_name = os.getenv("FLASK_ENV", "development")
+
         config_name = os.getenv("FLASK_ENV", "development")
 
     app = Flask(__name__)
