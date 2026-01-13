@@ -1,19 +1,14 @@
-"""
-Toll Zones Routes
-File: backend/routes/toll_zones.py
-Task: Backend Task 3 - Toll Zone CRUD API
-"""
-
 from flask import Blueprint, request, jsonify
-from models.models import db, TollZone
+from utils.auth import optional_jwt
+from models.models import TollZone, db
 
-toll_zones_bp = Blueprint("toll_zones_bp", __name__, url_prefix="/api")
-
+toll_zones_bp = Blueprint("toll_zones_bp", __name__)
 
 # --------------------------------
 # GET all toll zones
 # --------------------------------
 @toll_zones_bp.route("/toll-zones", methods=["GET"])
+@optional_jwt
 def get_toll_zones():
     zones = TollZone.query.all()
 
@@ -24,32 +19,41 @@ def get_toll_zones():
 
 
 # --------------------------------
-# CREATE toll zone
+# CREATE a toll zone
 # --------------------------------
 @toll_zones_bp.route("/toll-zones", methods=["POST"])
+@optional_jwt
 def create_toll_zone():
     data = request.get_json()
 
     if not data:
         return jsonify({
             "success": False,
-            "error": "No data provided"
+            "error": "Request body is required"
         }), 400
 
+    required_fields = ["zone_name", "charge_amount", "polygon_coords"]
+    for field in required_fields:
+        if field not in data:
+            return jsonify({
+                "success": False,
+                "error": f"Missing required field: {field}"
+            }), 400
+
     try:
-        zone = TollZone(
+        new_zone = TollZone(
             zone_name=data["zone_name"],
-            charge_amount=data["charge_amount"],
+            charge_amount=int(data["charge_amount"]),
             polygon_coords=data["polygon_coords"]
         )
 
-        db.session.add(zone)
+        db.session.add(new_zone)
         db.session.commit()
 
         return jsonify({
             "success": True,
             "message": "Toll zone created successfully",
-            "zone": zone.to_dict()
+            "zone": new_zone.to_dict()
         }), 201
 
     except Exception as e:
@@ -61,9 +65,10 @@ def create_toll_zone():
 
 
 # --------------------------------
-# UPDATE toll zone
+# UPDATE a toll zone
 # --------------------------------
 @toll_zones_bp.route("/toll-zones/<uuid:zone_id>", methods=["PUT"])
+@optional_jwt
 def update_toll_zone(zone_id):
     zone = TollZone.query.filter_by(zone_id=zone_id).first()
 
@@ -75,10 +80,24 @@ def update_toll_zone(zone_id):
 
     data = request.get_json()
 
+    if not data:
+        return jsonify({
+            "success": False,
+            "error": "Request body is required"
+        }), 400
+
     try:
-        zone.zone_name = data.get("zone_name", zone.zone_name)
-        zone.charge_amount = data.get("charge_amount", zone.charge_amount)
-        zone.polygon_coords = data.get("polygon_coords", zone.polygon_coords)
+        if "zone_name" in data:
+            zone.zone_name = data["zone_name"]
+
+        if "charge_amount" in data:
+            zone.charge_amount = int(data["charge_amount"])
+
+        if "polygon_coords" in data:
+            zone.polygon_coords = data["polygon_coords"]
+
+        if "is_active" in data:
+            zone.is_active = data["is_active"]
 
         db.session.commit()
 

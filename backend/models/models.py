@@ -102,7 +102,6 @@ class TollZone(db.Model):
             'zone_id': str(self.zone_id),
             'zone_name': self.zone_name,
             'charge_amount': self.charge_amount,
-            'charge_amount_formatted': f'KES {self.charge_amount/100:.2f}',
             'polygon_coords': self.polygon_coords,
             'is_active': self.is_active,
             'created_by': str(self.created_by) if self.created_by else None,
