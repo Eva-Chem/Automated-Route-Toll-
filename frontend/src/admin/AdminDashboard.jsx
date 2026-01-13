@@ -1,10 +1,8 @@
 import DashboardLayout from "../layout/DashboardLayout";
 import GoogleMapCanvas from "../map/GoogleMapCanvas";
-import { mockTransactions } from "../mock/transactions.mock";
-import { mockZones } from "../mock/zones.mock";
 
-export default function AdminDashboard() {
-  const totalRevenue = mockTransactions
+export default function AdminDashboard({ transactions, zones }) {
+  const totalRevenue = transactions
     .filter(t => t.status === "Completed")
     .reduce((s, t) => s + t.amount, 0);
 
@@ -20,7 +18,7 @@ export default function AdminDashboard() {
 
       <div className="card shadow-sm">
         <div className="card-body">
-          <GoogleMapCanvas zones={mockZones} readOnly />
+          <GoogleMapCanvas zones={zones} readOnly />
         </div>
       </div>
     </DashboardLayout>
