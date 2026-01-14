@@ -90,6 +90,7 @@ automated-toll-tracker/
 | Column | Type | Description |
 |------|------|-------------|
 | zone_id | UUID | Unique toll zone identifier |
+| zone_name | TEXT | Zone name
 | charge_amount | INTEGER | Toll amount |
 | polygon_coords | JSONB | Polygon vertices |
 
@@ -262,5 +263,6 @@ Educational & demonstration use only.
 **Automated Route Toll & Payment Tracker**
 
 For questions or support, please open an issue on GitHub.
+
 
 
