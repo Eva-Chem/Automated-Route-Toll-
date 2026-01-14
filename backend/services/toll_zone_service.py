@@ -54,7 +54,7 @@ def fetch_all_toll_zones():
                 {"lat": -1.2600, "lng": 36.7535},
                 {"lat": -1.2595, "lng": 36.7515}
             ]
-        }
+        },
         {
             "id": 6,
             "name": "Maalim Juma Road Toll",
