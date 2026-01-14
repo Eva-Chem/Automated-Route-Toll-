@@ -33,17 +33,17 @@ def create_app(config_name=None):
     # -------------------------
     # Register Blueprints
     # -------------------------
-    from routes.test_routes import test_bp
+   # from routes.test_routes import test_bp
     from routes.toll_zones import toll_zones_bp
     from routes.geo_fencing_routes import geo_fencing_bp
     from routes.tolls_history import tolls_history_bp
-    from routes.dev_auth import dev_auth_bp
+    #from routes.dev_auth import dev_auth_bp
 
-    app.register_blueprint(test_bp, url_prefix="/api")
+   # app.register_blueprint(test_bp, url_prefix="/api")
     app.register_blueprint(toll_zones_bp, url_prefix="/api")
     app.register_blueprint(geo_fencing_bp, url_prefix="/api")
     app.register_blueprint(tolls_history_bp, url_prefix="/api")
-    app.register_blueprint(dev_auth_bp, url_prefix="/api")
+   # app.register_blueprint(dev_auth_bp, url_prefix="/api")
 
     # -------------------------
     # Health & Root

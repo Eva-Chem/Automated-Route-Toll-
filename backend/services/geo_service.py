@@ -13,7 +13,7 @@ Responsibilities:
 from datetime import datetime, timedelta
 from shapely.geometry import Point, Polygon
 
-from models.models import db, TollZone, TollEntry, TollPaid
+from models.models import db, TollZone, TollPaid
 
 
 class GeoFencingService:
