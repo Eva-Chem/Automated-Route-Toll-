@@ -14,7 +14,7 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 
-from models.models import User, TollZone
+from models.models import  TollZone
 from services.geo_service import GeoFencingService
 from middleware.auth_middleware import (
     admin_required,
