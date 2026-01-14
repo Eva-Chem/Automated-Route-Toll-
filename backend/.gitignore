@@ -1,5 +1,6 @@
 # =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,22 +14,13 @@ env/
 venv/
 ENV/
 .venv/
+backend/venv/
 
 # =========================
 # Build / Packaging
 # =========================
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -37,8 +29,8 @@ wheels/
 # Environment variables
 # =========================
 .env
+.env.*
 .env.local
-.env.*.local
 
 # =========================
 # IDE / Editor
@@ -69,10 +61,15 @@ logs/
 *.sqlite3
 
 # =========================
-# Testing
+# Testing artifacts
 # =========================
 .pytest_cache/
 .coverage
 htmlcov/
-test_*.py
 
+# =========================
+# Migrations & Seeds
+# =========================
+migrations/
+seed_*.py
+seeds/
