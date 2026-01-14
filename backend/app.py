@@ -6,13 +6,12 @@ File: backend/app.py
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from .config import config
+from config import config
 from models.models import db
 import os
 
 
 def create_app(config_name=None):
-
     if config_name is None:
         config_name = os.getenv("FLASK_ENV", "development")
 
@@ -22,7 +21,7 @@ def create_app(config_name=None):
     # Enable CORS
     CORS(app)
 
-    # Init extensions
+    # Initialize extensions
     db.init_app(app)
     JWTManager(app)
 
@@ -33,12 +32,13 @@ def create_app(config_name=None):
     from routes.toll_zones import toll_zones_bp
     from routes.geo_fencing_routes import geo_fencing_bp
 
+    # Use "/api" prefix for all API routes
     app.register_blueprint(test_bp, url_prefix="/api")
     app.register_blueprint(toll_zones_bp, url_prefix="/api")
     app.register_blueprint(geo_fencing_bp, url_prefix="/api")
 
     # -------------------------
-    # Health & Root
+    # Health & Root Endpoints
     # -------------------------
     @app.route("/health")
     def health():
@@ -54,6 +54,7 @@ def create_app(config_name=None):
     return app
 
 
+# Create app instance
 app = create_app()
 
 if __name__ == "__main__":
