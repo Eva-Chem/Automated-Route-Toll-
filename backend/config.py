@@ -16,11 +16,13 @@ class Config:
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL',
-        'postgresql://localhost/toll_tracker'
-    )
+        "DATABASE_URL")
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.getenv('FLASK_ENV') == 'development'
+    
+    if not SQLALCHEMY_DATABASE_URI:
+        raise RuntimeError("DATABASE_URL environment variable not set")   
     
     # JWT Configuration
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')

@@ -1,10 +1,12 @@
 # =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.pyc
 
 # =========================
 # Virtual Environments
@@ -13,22 +15,14 @@ env/
 venv/
 ENV/
 .venv/
+backend/venv/
+backend/env/
 
 # =========================
 # Build / Packaging
 # =========================
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -37,8 +31,9 @@ wheels/
 # Environment variables
 # =========================
 .env
+.env.*
 .env.local
-.env.*.local
+.env.example
 
 # =========================
 # IDE / Editor
@@ -69,10 +64,41 @@ logs/
 *.sqlite3
 
 # =========================
-# Testing
+# Testing artifacts
 # =========================
 .pytest_cache/
 .coverage
 htmlcov/
-test_*.py
+.tox/
 
+# =========================
+# Migrations & Seeds (optional)
+# =========================
+# Uncomment if you don't want to track migrations
+# */migrations/
+# **/migrations/
+seed_many_transactions.py
+seed_transactions.py
+
+# =========================
+# Flask/Python specific
+# =========================
+instance/
+.webassets-cache
+.scrapy
+
+# =========================
+# Celery
+# =========================
+celerybeat-schedule
+celerybeat.pid
+
+# =========================
+# Cache directories
+# =========================
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+stk_callbacks.json
+c2b_confirmations.json
