@@ -1,5 +1,5 @@
 import DashboardLayout from "../layout/DashboardLayout";
-import GoogleMapCanvas from "../map/GoogleMapCanvas";
+import MapCanvas from "../map/MapCanvas";
 
 export default function AdminDashboard({ transactions, zones }) {
   const totalRevenue = transactions
@@ -18,7 +18,7 @@ export default function AdminDashboard({ transactions, zones }) {
 
       <div className="card shadow-sm">
         <div className="card-body">
-          <GoogleMapCanvas zones={zones} readOnly />
+          <MapCanvas zones={zones} selectedId={null} onSelect={() => {}} mapId="admin-dashboard" />
         </div>
       </div>
     </DashboardLayout>

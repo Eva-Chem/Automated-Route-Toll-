@@ -9,7 +9,14 @@ export default function TollZones() {
   const [zones, setZones] = useState(mockZones);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: "", charge_amount: "", coordinates: "" });
+  const [formData, setFormData] = useState({ 
+    name: "", 
+    charge_amount: "", 
+    lat1: "", lng1: "",
+    lat2: "", lng2: "",
+    lat3: "", lng3: "",
+    lat4: "", lng4: ""
+  });
 
   const filteredZones = zones.filter(z =>
     z.name.toLowerCase().includes(search.toLowerCase())
@@ -17,14 +24,28 @@ export default function TollZones() {
 
   const handleCreate = () => {
     if (formData.name && formData.charge_amount) {
+      const coordinates = [
+        parseFloat(formData.lat1), parseFloat(formData.lng1),
+        parseFloat(formData.lat2), parseFloat(formData.lng2),
+        parseFloat(formData.lat3), parseFloat(formData.lng3),
+        parseFloat(formData.lat4), parseFloat(formData.lng4),
+      ].filter(coord => !isNaN(coord));
+      
       const newZone = {
         id: Math.max(...zones.map(z => z.id)) + 1,
         name: formData.name,
         charge_amount: parseFloat(formData.charge_amount),
-        coordinates: formData.coordinates ? JSON.parse(formData.coordinates) : [],
+        coordinates: coordinates,
       };
       setZones([...zones, newZone]);
-      setFormData({ name: "", charge_amount: "", coordinates: "" });
+      setFormData({ 
+        name: "", 
+        charge_amount: "", 
+        lat1: "", lng1: "",
+        lat2: "", lng2: "",
+        lat3: "", lng3: "",
+        lat4: "", lng4: ""
+      });
       setShowCreateForm(false);
     }
   };
@@ -34,23 +55,44 @@ export default function TollZones() {
     setFormData({
       name: zone.name,
       charge_amount: zone.charge_amount,
-      coordinates: JSON.stringify(zone.coordinates),
+      lat1: zone.coordinates[0] || "",
+      lng1: zone.coordinates[1] || "",
+      lat2: zone.coordinates[2] || "",
+      lng2: zone.coordinates[3] || "",
+      lat3: zone.coordinates[4] || "",
+      lng3: zone.coordinates[5] || "",
+      lat4: zone.coordinates[6] || "",
+      lng4: zone.coordinates[7] || "",
     });
   };
 
   const handleUpdate = () => {
+    const coordinates = [
+      parseFloat(formData.lat1), parseFloat(formData.lng1),
+      parseFloat(formData.lat2), parseFloat(formData.lng2),
+      parseFloat(formData.lat3), parseFloat(formData.lng3),
+      parseFloat(formData.lat4), parseFloat(formData.lng4),
+    ].filter(coord => !isNaN(coord));
+    
     setZones(zones.map(z =>
       z.id === editingId
         ? {
             ...z,
             name: formData.name,
             charge_amount: parseFloat(formData.charge_amount),
-            coordinates: formData.coordinates ? JSON.parse(formData.coordinates) : z.coordinates,
+            coordinates: coordinates,
           }
         : z
     ));
     setEditingId(null);
-    setFormData({ name: "", charge_amount: "", coordinates: "" });
+    setFormData({ 
+      name: "", 
+      charge_amount: "", 
+      lat1: "", lng1: "",
+      lat2: "", lng2: "",
+      lat3: "", lng3: "",
+      lat4: "", lng4: ""
+    });
   };
 
   const handleDelete = (id) => {
@@ -62,7 +104,14 @@ export default function TollZones() {
   const handleCancel = () => {
     setShowCreateForm(false);
     setEditingId(null);
-    setFormData({ name: "", charge_amount: "", coordinates: "" });
+    setFormData({ 
+      name: "", 
+      charge_amount: "", 
+      lat1: "", lng1: "",
+      lat2: "", lng2: "",
+      lat3: "", lng3: "",
+      lat4: "", lng4: ""
+    });
   };
 
   return (
@@ -104,13 +153,120 @@ export default function TollZones() {
                   onChange={e => setFormData({ ...formData, charge_amount: e.target.value })}
                 />
               </div>
-              <div className="col-md-4">
-                <input
-                  className="form-control"
-                  placeholder='Coordinates JSON (e.g., [{"lat": -1.2, "lng": 36.8}])'
-                  value={formData.coordinates}
-                  onChange={e => setFormData({ ...formData, coordinates: e.target.value })}
-                />
+            </div>
+            <div className="mt-3">
+              <h6>Coordinates (4 points for the toll zone polygon)</h6>
+              
+              <div className="mb-3">
+                <h6 className="text-muted">Point 1</h6>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">Latitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., -1.2864"
+                      type="number"
+                      step="any"
+                      value={formData.lat1}
+                      onChange={e => setFormData({ ...formData, lat1: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Longitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., 36.8172"
+                      type="number"
+                      step="any"
+                      value={formData.lng1}
+                      onChange={e => setFormData({ ...formData, lng1: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <h6 className="text-muted">Point 2</h6>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">Latitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., -1.2864"
+                      type="number"
+                      step="any"
+                      value={formData.lat2}
+                      onChange={e => setFormData({ ...formData, lat2: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Longitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., 36.8172"
+                      type="number"
+                      step="any"
+                      value={formData.lng2}
+                      onChange={e => setFormData({ ...formData, lng2: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <h6 className="text-muted">Point 3</h6>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">Latitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., -1.2864"
+                      type="number"
+                      step="any"
+                      value={formData.lat3}
+                      onChange={e => setFormData({ ...formData, lat3: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Longitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., 36.8172"
+                      type="number"
+                      step="any"
+                      value={formData.lng3}
+                      onChange={e => setFormData({ ...formData, lng3: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <h6 className="text-muted">Point 4</h6>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <label className="form-label">Latitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., -1.2864"
+                      type="number"
+                      step="any"
+                      value={formData.lat4}
+                      onChange={e => setFormData({ ...formData, lat4: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Longitude</label>
+                    <input
+                      className="form-control"
+                      placeholder="e.g., 36.8172"
+                      type="number"
+                      step="any"
+                      value={formData.lng4}
+                      onChange={e => setFormData({ ...formData, lng4: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <div className="mt-3">
@@ -133,9 +289,9 @@ export default function TollZones() {
                 <h5>{zone.name}</h5>
                 <p>Ksh {zone.charge_amount}</p>
 
-                {zone.coordinates.map((c, i) => (
+                {Array.from({ length: zone.coordinates.length / 2 }, (_, i) => (
                   <div key={i} className="small text-muted">
-                    lat: {c.lat} lng: {c.lng}
+                    Point {i+1}: lat {zone.coordinates[i*2]}, lng {zone.coordinates[i*2+1]}
                   </div>
                 ))}
 

@@ -183,26 +183,6 @@ export default function Login() {
                 )}
               </button>
 
-              {/* Demo Credentials */}
-              <div className="demo-section">
-                <p className="demo-title">Demo Credentials</p>
-                <div className="demo-cards">
-                  <div className="demo-card admin">
-                    <div className="demo-role">Administrator</div>
-                    <p className="demo-text">
-                      <strong>Username:</strong> admin<br />
-                      <strong>Password:</strong> admin123
-                    </p>
-                  </div>
-                  <div className="demo-card operator">
-                    <div className="demo-role">Operator</div>
-                    <p className="demo-text">
-                      <strong>Username:</strong> operator<br />
-                      <strong>Password:</strong> operator123
-                    </p>
-                  </div>
-                </div>
-              </div>
             </form>
 
             <p className="login-footer">
