@@ -37,12 +37,14 @@ def create_app(config_name=None):
     from routes.toll_zones import toll_zones_bp
     from routes.geo_fencing_routes import geo_fencing_bp
     from routes.tolls_history import tolls_history_bp
+    from routes.mpesa_routes import mpesa_bp
     #from routes.dev_auth import dev_auth_bp
 
    # app.register_blueprint(test_bp, url_prefix="/api")
     app.register_blueprint(toll_zones_bp, url_prefix="/api")
     app.register_blueprint(geo_fencing_bp, url_prefix="/api")
     app.register_blueprint(tolls_history_bp, url_prefix="/api")
+    app.register_blueprint(mpesa_bp)
    # app.register_blueprint(dev_auth_bp, url_prefix="/api")
 
     # -------------------------
