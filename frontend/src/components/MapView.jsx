@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+/* ================= ICON ================= */
 
 const driverIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -18,54 +18,67 @@ const driverIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-const START_POSITION = [-1.3005, 36.7896];
+const DRIVER_START_POSITION = [-1.283, 36.82];
 
-const RecenterMap = ({ position }) => {
+/* ================= HELPERS ================= */
+
+const RecenterToZones = ({ zones }) => {
   const map = useMap();
+
   useEffect(() => {
-    map.setView(position, 16);
-  }, [position, map]);
+    if (!zones.length) return;
+
+    const bounds = L.latLngBounds(
+      zones.flatMap((zone) => zone.coordinates)
+    );
+
+    map.fitBounds(bounds, { padding: [80, 80] });
+  }, [zones, map]);
+
   return null;
 };
 
+/* ================= COMPONENT ================= */
+
 const MapView = ({ onTollTriggered }) => {
-  const [position] = useState(START_POSITION);
   const [zones, setZones] = useState([]);
+  const [driverPosition] = useState(DRIVER_START_POSITION);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/toll-zones`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          const formatted = data.data.map((z) => ({
-            ...z,
-            coordinates: z.coordinates.map((c) => [c.lat, c.lng])
-          }));
-          setZones(formatted);
+    const fetchZones = async () => {
+      const res = await fetch("/api/toll-zones");
+      const data = await res.json();
 
-          // Demo: trigger first zone
-          onTollTriggered(formatted[0]);
-        }
-      })
-      .catch(() => {
-        console.warn("Failed to load toll zones");
-      });
+      if (data.success) {
+        const formatted = data.data.map((z) => ({
+          id: z.id,
+          name: z.name,
+          charge_amount: z.charge_amount,
+          coordinates: z.coordinates.map((c) => [c.lat, c.lng])
+        }));
+
+        setZones(formatted);
+        if (formatted.length) onTollTriggered(formatted[0]);
+      }
+    };
+
+    fetchZones();
   }, [onTollTriggered]);
 
   return (
     <MapContainer
-      center={position}
-      zoom={16}
-      style={{ height: "360px", width: "100%", zIndex: 1 }}
+      center={driverPosition}
+      zoom={14}
+      style={{ height: "100%", width: "100%" }}
     >
-      <RecenterMap position={position} />
+      <RecenterToZones zones={zones} />
 
       <TileLayer
         attribution="© OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <Marker position={position} icon={driverIcon}>
+      <Marker position={driverPosition} icon={driverIcon}>
         <Popup>You are here</Popup>
       </Marker>
 
@@ -76,15 +89,9 @@ const MapView = ({ onTollTriggered }) => {
           pathOptions={{
             color: "#DC2626",
             fillColor: "#FCA5A5",
-            fillOpacity: 0.5
+            fillOpacity: 0.45
           }}
-        >
-          <Popup>
-            <strong>{zone.name}</strong>
-            <br />
-            KES {zone.charge_amount}
-          </Popup>
-        </Polygon>
+        />
       ))}
     </MapContainer>
   );

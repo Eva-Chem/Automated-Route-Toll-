@@ -11,42 +11,70 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+SQLITE_DB_PATH = os.path.join(BASE_DIR, "toll_tracker.db")
+
+
 class Config:
     """Base configuration"""
-    
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL")
 
+    # --------------------
+    # DATABASE (DEFAULT)
+    # --------------------
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        f"sqlite:///{SQLITE_DB_PATH}"  # ✅ SAFE DEFAULT
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = os.getenv('FLASK_ENV') == 'development'
-    
-    if not SQLALCHEMY_DATABASE_URI:
-        raise RuntimeError("DATABASE_URL environment variable not set")   
-    
-    # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+    SQLALCHEMY_ECHO = False
+
+    # --------------------
+    # JWT CONFIG
+    # --------------------
+    JWT_SECRET_KEY = os.getenv(
+        "JWT_SECRET_KEY",
+        "dev-secret-key-change-in-production"
+    )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
-    
-    # M-Pesa Configuration
-    MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
-    MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
-    MPESA_SHORTCODE = os.getenv('MPESA_SHORTCODE')
-    MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')
-    MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
-    
-    # Security
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
-    
+
+    # --------------------
+    # MPESA (OPTIONAL FOR NOW)
+    # --------------------
+    MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
+    MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
+    MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
+    MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
+    MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL")
+
+    # --------------------
+    # SECURITY
+    # --------------------
+    SECRET_KEY = os.getenv(
+        "SECRET_KEY",
+        "dev-secret-key-change-in-production"
+    )
+
+    # --------------------
     # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    # --------------------
+    CORS_ORIGINS = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3000"
+    ).split(",")
 
 
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     TESTING = False
+    SQLALCHEMY_ECHO = True
+
+
+class TestingConfig(Config):
+    """Testing configuration"""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
 
 
 class ProductionConfig(Config):
@@ -54,25 +82,21 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
 
-
-class TestingConfig(Config):
-    """Testing configuration"""
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/toll_tracker_test'
+    # ⚠️ Production MUST explicitly set DATABASE_URL
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
 
 
-# Configuration dictionary - THIS IS THE IMPORTANT PART!
+# Configuration dictionary
 config = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-    'default': DevelopmentConfig
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig
 }
 
 
-# Helper function to get current config
 def get_config(config_name=None):
     """Get configuration based on environment"""
     if config_name is None:
-        config_name = os.getenv('FLASK_ENV', 'development')
-    return config.get(config_name, config['default'])
+        config_name = os.getenv("FLASK_ENV", "development")
+    return config.get(config_name, config["default"])
