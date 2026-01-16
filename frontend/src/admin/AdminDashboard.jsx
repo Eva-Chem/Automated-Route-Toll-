@@ -1,8 +1,17 @@
 import DashboardLayout from "../layout/DashboardLayout";
 import MapCanvas from "../map/MapCanvas";
+import { useZoneStore } from "../store/zone.store";
+import { mockTransactions } from "../mock/transactions.mock";
+import { useEffect } from "react";
 
-export default function AdminDashboard({ transactions, zones }) {
-  const totalRevenue = transactions
+export default function AdminDashboard() {
+  const { zones, fetchZones } = useZoneStore();
+
+  useEffect(() => {
+    fetchZones();
+  }, [fetchZones]);
+
+  const totalRevenue = mockTransactions
     .filter(t => t.status === "Completed")
     .reduce((s, t) => s + t.amount, 0);
 
@@ -18,7 +27,7 @@ export default function AdminDashboard({ transactions, zones }) {
 
       <div className="card shadow-sm">
         <div className="card-body">
-          <MapCanvas zones={zones} selectedId={null} onSelect={() => {}} mapId="admin-dashboard" />
+          <MapCanvas zones={zones} mode="admin" />
         </div>
       </div>
     </DashboardLayout>
