@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone as apiDelete } from "../components/TollZones/TollZones.api";
+import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone as apiDelete } from "../components/TollZones/tollZones.api";
 
 export const useZoneStore = create((set, get) => ({
   zones: [],

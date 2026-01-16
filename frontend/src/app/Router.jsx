@@ -1,9 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import RequireRole from "../auth/RequireRole";
 import AdminDashboard from "../admin/AdminDashboard";
-import Transactions from "../admin/Transactions";
+import TransactionsPage from "../admin/TransactionsPage";
 import OperatorDashboard from "../operator/OperatorDashboard";
-import TollZones from "../components/TollZones/TollZones";
+import TollZonesPage from "../components/TollZones/TollZonesPage";
 import { useAuth } from "../auth/auth.context";
 import Login from "../auth/Login";
 
@@ -32,7 +32,7 @@ export default function Router() {
         path="/dashboard/transactions"
         element={
           <RequireRole allow={["admin"]}>
-            <Transactions />
+            <TransactionsPage />
           </RequireRole>
         }
       />
@@ -41,7 +41,7 @@ export default function Router() {
         path="/dashboard/zones"
         element={
           <RequireRole allow={["admin"]}>
-            <TollZones />
+            <TollZonesPage />
           </RequireRole>
         }
       />
@@ -59,7 +59,7 @@ export default function Router() {
         path="/operator/zones"
         element={
           <RequireRole allow={["operator"]}>
-            <TollZones />
+            <TollZonesPage />
           </RequireRole>
         }
       />

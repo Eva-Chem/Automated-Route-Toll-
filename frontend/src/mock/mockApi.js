@@ -1,4 +1,3 @@
-import { mockTollsHistory } from "./mockData";
 import { mockZones } from "./zones.mock";
 
 const delay = (ms) =>
@@ -39,12 +38,6 @@ const mockApi = {
 
   get: async (url) => {
     await delay(1000);
-
-    if (url === "/tolls-history") {
-      return {
-        data: mockTollsHistory,
-      };
-    }
 
     if (url === "/api/toll-zones") {
       return {
