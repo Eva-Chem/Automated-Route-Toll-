@@ -1,9 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
+# backend/db/models.py
+from db.database import db
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from datetime import datetime
 import uuid
-
-db = SQLAlchemy()
 
 # -----------------------------
 # User Table
