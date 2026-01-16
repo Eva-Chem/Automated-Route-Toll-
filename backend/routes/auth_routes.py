@@ -1,31 +1,83 @@
+# backend/routes/auth_routes.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
-from services.auth_service import authenticate
+from werkzeug.security import check_password_hash, generate_password_hash
+from db import db, User
+import uuid
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+auth_bp = Blueprint("auth", __name__)
+
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    """Register a new user"""
+    try:
+        data = request.get_json()
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        # Check if user already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+
+        # Create new user
+        password_hash = generate_password_hash(password)
+        new_user = User(
+            user_id=uuid.uuid4(),
+            username=username,
+            password_hash=password_hash
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({
+            "message": "User registered successfully",
+            "user": {
+                "user_id": str(new_user.user_id),
+                "username": new_user.username
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    """Login user and return JWT token"""
+    try:
+        data = request.get_json()
+        username = data.get("username")
+        password = data.get("password")
 
-    if not data or "username" not in data or "password" not in data:
-        return jsonify({"error": "Missing credentials"}), 400
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
 
-    user = authenticate(data["username"], data["password"])
+        # Find user
+        user = User.query.filter_by(username=username).first()
 
-    if not user:
-        return jsonify({"error": "Invalid username or password"}), 401
+        if not user or not check_password_hash(user.password_hash, password):
+            return jsonify({"error": "Invalid username or password"}), 401
 
-    access_token = create_access_token(identity={
-        "id": user.id,
-        "role": user.role
-    })
+        # Create access token
+        access_token = create_access_token(identity={
+            "user_id": str(user.user_id),
+            "username": user.username
+        })
 
-    return jsonify({
-        "token": access_token,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "role": user.role
-        }
-    }), 200
+        return jsonify({
+            "message": "Login successful",
+            "token": access_token,
+            "user": {
+                "user_id": str(user.user_id),
+                "username": user.username
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

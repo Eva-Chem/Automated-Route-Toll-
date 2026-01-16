@@ -1,3 +1,4 @@
+# backend/app.py
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -5,7 +6,9 @@ from flask_jwt_extended import JWTManager
 from db.database import db, init_db
 from routes.auth_routes import auth_bp
 from routes.mpesa_routes import mpesa_bp
-from routes.check_zone import check_zone_bp
+from routes.geo_fencing_routes import geo_fencing_bp
+from routes.toll_zones import toll_zones_bp
+from routes.tolls_history import tolls_history_bp
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -35,11 +38,12 @@ def create_app(test_config=None):
     # Initialize JWT
     JWTManager(app)
 
-    
     # Register Blueprints
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(check_zone_bp, url_prefix='/api')
     app.register_blueprint(mpesa_bp)
+    app.register_blueprint(geo_fencing_bp, url_prefix='/api/geo-fencing')
+    app.register_blueprint(toll_zones_bp, url_prefix='/api')
+    app.register_blueprint(tolls_history_bp, url_prefix='/api')
     
     @app.route("/", methods=["GET"])
     def home():

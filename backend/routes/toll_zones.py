@@ -1,6 +1,6 @@
+# backend/routes/toll_zones.py
 from flask import Blueprint, request, jsonify
-from utils.auth import optional_jwt
-from models.models import TollZone, db
+from db import db, TollZone
 
 toll_zones_bp = Blueprint("toll_zones_bp", __name__)
 
@@ -8,7 +8,6 @@ toll_zones_bp = Blueprint("toll_zones_bp", __name__)
 # GET all toll zones
 # --------------------------------
 @toll_zones_bp.route("/toll-zones", methods=["GET"])
-@optional_jwt
 def get_toll_zones():
     zones = TollZone.query.all()
 
@@ -22,7 +21,6 @@ def get_toll_zones():
 # CREATE a toll zone
 # --------------------------------
 @toll_zones_bp.route("/toll-zones", methods=["POST"])
-@optional_jwt
 def create_toll_zone():
     data = request.get_json()
 
@@ -68,7 +66,6 @@ def create_toll_zone():
 # UPDATE a toll zone
 # --------------------------------
 @toll_zones_bp.route("/toll-zones/<uuid:zone_id>", methods=["PUT"])
-@optional_jwt
 def update_toll_zone(zone_id):
     zone = TollZone.query.filter_by(zone_id=zone_id).first()
 
@@ -95,9 +92,6 @@ def update_toll_zone(zone_id):
 
         if "polygon_coords" in data:
             zone.polygon_coords = data["polygon_coords"]
-
-        if "is_active" in data:
-            zone.is_active = data["is_active"]
 
         db.session.commit()
 

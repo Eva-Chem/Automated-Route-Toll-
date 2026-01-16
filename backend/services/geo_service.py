@@ -1,3 +1,4 @@
+# backend/services/geo_service.py
 """
 Geo-Fencing Service
 File: backend/services/geo_service.py
@@ -12,8 +13,7 @@ Responsibilities:
 
 from datetime import datetime, timedelta
 from shapely.geometry import Point, Polygon
-
-from models.models import db, TollZone, TollPaid
+from db import db, TollZone, TollPaid, TollEntry
 
 
 class GeoFencingService:
@@ -59,7 +59,7 @@ class GeoFencingService:
     # --------------------------------------------------
     @staticmethod
     def check_zone_entry(driver_id, latitude, longitude):
-        active_zones = TollZone.query.filter_by(is_active=True).all()
+        active_zones = TollZone.query.all()
 
         for zone in active_zones:
             if GeoFencingService.is_point_in_polygon(
@@ -67,8 +67,7 @@ class GeoFencingService:
             ):
                 # Check for active entry (no exit yet)
                 existing_entry = TollEntry.query.filter_by(
-                    driver_id=driver_id,
-                    zone_id=zone.zone_id,
+                    user_id=driver_id,  # Changed from driver_id to user_id
                     exit_time=None
                 ).first()
 
@@ -82,8 +81,7 @@ class GeoFencingService:
 
                 # Check last exit (30-minute rule)
                 recent_exit = TollEntry.query.filter(
-                    TollEntry.driver_id == driver_id,
-                    TollEntry.zone_id == zone.zone_id,
+                    TollEntry.user_id == driver_id,  # Changed from driver_id
                     TollEntry.exit_time.isnot(None)
                 ).order_by(TollEntry.exit_time.desc()).first()
 
@@ -99,8 +97,8 @@ class GeoFencingService:
 
                 # Create new entry
                 entry = TollEntry(
-                    driver_id=driver_id,
-                    zone_id=zone.zone_id
+                    user_id=driver_id,  # Changed from driver_id
+                    entry_time=datetime.utcnow()
                 )
                 db.session.add(entry)
                 db.session.commit()
@@ -123,10 +121,9 @@ class GeoFencingService:
     # Zone Exit Recording
     # --------------------------------------------------
     @staticmethod
-    def record_zone_exit(driver_id, zone_id):
+    def record_zone_exit(driver_id):
         entry = TollEntry.query.filter_by(
-            driver_id=driver_id,
-            zone_id=zone_id,
+            user_id=driver_id,  # Changed from driver_id
             exit_time=None
         ).first()
 

@@ -1,5 +1,6 @@
+# backend/routes/tolls_history.py
 from flask import Blueprint, jsonify
-from models.models import TollPaid, TollZone
+from db import db, TollPaid, TollZone
 
 tolls_history_bp = Blueprint("tolls_history_bp", __name__)
 

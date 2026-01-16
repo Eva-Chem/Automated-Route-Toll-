@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 from services.mpesa_service import MpesaService
 from services.config import MpesaConfig
+from db import db, TollPaid
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
