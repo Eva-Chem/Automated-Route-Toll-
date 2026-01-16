@@ -6,41 +6,24 @@ export default function TollPanel({ zone, onMakePayment }) {
       <div className="toll-card">
         <h2 className="toll-title">Automated Toll Information</h2>
 
-        {!zone ? (
-          <p>No active toll zone detected.</p>
-        ) : (
-          <>
-            <div className="toll-row">
-              <span className="label">Toll Zone</span>
-              <span className="value">{zone.zone_name}</span>
-            </div>
+        <div className="toll-row">
+          <span className="label">Toll Zone</span>
+          <span className="value">{zone.name}</span>
+        </div>
 
-            <div className="toll-row">
-              <span className="label">Amount</span>
-              <span className="value">KES {zone.charge_amount}</span>
-            </div>
+        <div className="toll-row">
+          <span className="label">Amount</span>
+          <span className="value">KES {zone.charge_amount}</span>
+        </div>
 
-            <div className="toll-row">
-              <span className="label">Status</span>
-              <span className={`status-pill ${zone.status}`}>
-                {zone.status === "paid" ? "Paid" : "Unpaid"}
-              </span>
-            </div>
+        <div className="toll-row">
+          <span className="label">Status</span>
+          <span className="status-pill unpaid">Unpaid</span>
+        </div>
 
-            {zone.status !== "paid" && (
-              <button
-                type="button"                 // ✅ THIS IS THE FIX
-                className="primary-btn"
-                onClick={() => {
-                  console.log("Make Payment clicked"); // 👈 sanity check
-                  onMakePayment();
-                }}
-              >
-                Make Payment
-              </button>
-            )}
-          </>
-        )}
+        <button className="primary-btn" onClick={onMakePayment}>
+          Make Payment
+        </button>
       </div>
     </div>
   );

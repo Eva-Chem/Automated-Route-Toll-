@@ -1,59 +1,25 @@
 .top-nav {
-  height: 180px;
-  background-color: #0b1c2d;
-  color: #ffffff;
+  background: #0b1f33;
+  padding: 40px 16px 32px;
+  color: white;
+}
+
+.nav-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-/* Branding */
-.nav-center {
   text-align: center;
-  margin-bottom: 20px;
-}
-
-.nav-flag {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%; /* fully rounded */
-  object-fit: cover;
-  display: block;
-  margin: 0 auto 10px;
 }
 
 .nav-title {
+  font-size: 32px;
+  font-weight: 700;
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
 }
 
 .nav-subtitle {
-  margin-top: 6px;
-  font-size: 13px;
+  font-size: 15px;
   opacity: 0.85;
-}
-
-/* Tabs */
-.nav-tabs {
-  position: absolute;
-  bottom: 0;
-  display: flex;
-  gap: 32px;
-}
-
-.nav-tabs a {
-  padding-bottom: 12px;
-  font-size: 14px;
-  text-decoration: none;
-  color: #ffffff;
-  opacity: 0.6;
-}
-
-.nav-tabs a.active {
-  opacity: 1;
-  font-weight: 600;
-  border-bottom: 2px solid #ffffff;
+  margin-top: 8px;
+  max-width: 520px;
 }
