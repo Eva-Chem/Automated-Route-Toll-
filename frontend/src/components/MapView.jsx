@@ -10,7 +10,9 @@ import { useEffect, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-/* ================= ICON ================= */
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
+
+const DRIVER_START_POSITION = [-1.283, 36.82];
 
 const driverIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -18,27 +20,17 @@ const driverIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-const DRIVER_START_POSITION = [-1.283, 36.82];
-
-/* ================= HELPERS ================= */
-
 const RecenterToZones = ({ zones }) => {
   const map = useMap();
 
   useEffect(() => {
     if (!zones.length) return;
-
-    const bounds = L.latLngBounds(
-      zones.flatMap((zone) => zone.coordinates)
-    );
-
+    const bounds = L.latLngBounds(zones.flatMap(z => z.coordinates));
     map.fitBounds(bounds, { padding: [80, 80] });
   }, [zones, map]);
 
   return null;
 };
-
-/* ================= COMPONENT ================= */
 
 const MapView = ({ onTollTriggered }) => {
   const [zones, setZones] = useState([]);
@@ -46,19 +38,24 @@ const MapView = ({ onTollTriggered }) => {
 
   useEffect(() => {
     const fetchZones = async () => {
-      const res = await fetch("/api/toll-zones");
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/toll-zones`);
+      const json = await res.json();
+      if (!json.success) return;
 
-      if (data.success) {
-        const formatted = data.data.map((z) => ({
-          id: z.id,
-          name: z.name,
-          charge_amount: z.charge_amount,
-          coordinates: z.coordinates.map((c) => [c.lat, c.lng])
-        }));
+      const formatted = json.data.map(zone => ({
+        zone_id: zone.zone_id,                 // ✅ KEEP ID
+        zone_name: zone.zone_name,             // ✅ MATCH UI
+        charge_amount: zone.charge_amount,
+        coordinates: zone.polygon_coords.map(
+          ([lng, lat]) => [lat, lng]
+        )
+      }));
 
-        setZones(formatted);
-        if (formatted.length) onTollTriggered(formatted[0]);
+      setZones(formatted);
+
+      // ✅ Trigger first zone
+      if (formatted.length) {
+        onTollTriggered(formatted[0]);
       }
     };
 
@@ -66,11 +63,7 @@ const MapView = ({ onTollTriggered }) => {
   }, [onTollTriggered]);
 
   return (
-    <MapContainer
-      center={driverPosition}
-      zoom={14}
-      style={{ height: "100%", width: "100%" }}
-    >
+    <MapContainer center={driverPosition} zoom={14} style={{ height: "100%", width: "100%" }}>
       <RecenterToZones zones={zones} />
 
       <TileLayer
@@ -82,16 +75,21 @@ const MapView = ({ onTollTriggered }) => {
         <Popup>You are here</Popup>
       </Marker>
 
-      {zones.map((zone) => (
+      {zones.map(zone => (
         <Polygon
-          key={zone.id}
+          key={zone.zone_id}
           positions={zone.coordinates}
           pathOptions={{
-            color: "#DC2626",
-            fillColor: "#FCA5A5",
-            fillOpacity: 0.45
+            color: "#2563EB",
+            fillColor: "#93C5FD",
+            fillOpacity: 0.4
           }}
-        />
+        >
+          <Popup>
+            <strong>{zone.zone_name}</strong><br />
+            KES {zone.charge_amount}
+          </Popup>
+        </Polygon>
       ))}
     </MapContainer>
   );

@@ -1,94 +1,47 @@
-const TollPanel = ({ toll, paymentState, onPay }) => {
+import "../styles/home.css";
+
+export default function TollPanel({ zone, onMakePayment }) {
   return (
-    <aside style={styles.panel}>
-      <h2 style={styles.title}>Toll Zone</h2>
+    <div className="toll-section-inner">
+      <div className="toll-card">
+        <h2 className="toll-title">Automated Toll Information</h2>
 
-      {toll ? (
-        <>
-          <div style={styles.block}>
-            <label>Toll Name</label>
-            <strong>{toll.name}</strong>
-          </div>
+        {!zone ? (
+          <p>No active toll zone detected.</p>
+        ) : (
+          <>
+            <div className="toll-row">
+              <span className="label">Toll Zone</span>
+              <span className="value">{zone.zone_name}</span>
+            </div>
 
-          <div style={styles.block}>
-            <label>Amount</label>
-            <strong>KES {toll.charge_amount}</strong>
-          </div>
+            <div className="toll-row">
+              <span className="label">Amount</span>
+              <span className="value">KES {zone.charge_amount}</span>
+            </div>
 
-          <div style={styles.block}>
-            <label>Status</label>
-            <span style={styles.status(paymentState)}>
-              {paymentState}
-            </span>
-          </div>
+            <div className="toll-row">
+              <span className="label">Status</span>
+              <span className={`status-pill ${zone.status}`}>
+                {zone.status === "paid" ? "Paid" : "Unpaid"}
+              </span>
+            </div>
 
-          {paymentState === "UNPAID" && (
-            <button style={styles.cta} onClick={onPay}>
-              Make Payment
-            </button>
-          )}
-        </>
-      ) : (
-        <p style={styles.waiting}>Waiting for toll detection…</p>
-      )}
-    </aside>
+            {zone.status !== "paid" && (
+              <button
+                type="button"                 // ✅ THIS IS THE FIX
+                className="primary-btn"
+                onClick={() => {
+                  console.log("Make Payment clicked"); // 👈 sanity check
+                  onMakePayment();
+                }}
+              >
+                Make Payment
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
-};
-
-export default TollPanel;
-
-/* ================= STYLES ================= */
-
-const styles = {
-  panel: {
-    width: "360px",
-    background: "#0F172A",
-    color: "#E5E7EB",
-    padding: "32px 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    position: "relative",
-    zIndex: 10
-  },
-  title: {
-    fontSize: "20px",
-    marginBottom: "16px",
-    color: "#ffffff"
-  },
-  block: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    fontSize: "14px"
-  },
-  status: (s) => ({
-    display: "inline-block",
-    padding: "6px 12px",
-    borderRadius: "999px",
-    width: "fit-content",
-    background:
-      s === "PAID"
-        ? "#16A34A"
-        : s === "PENDING"
-        ? "#D97706"
-        : "#DC2626",
-    color: "#ffffff",
-    fontSize: "13px",
-    fontWeight: 600
-  }),
-  cta: {
-    marginTop: "32px",
-    padding: "14px",
-    background: "#2563EB",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "10px",
-    fontSize: "15px",
-    fontWeight: 600
-  },
-  waiting: {
-    color: "#9CA3AF",
-    fontSize: "14px"
-  }
-};
+}

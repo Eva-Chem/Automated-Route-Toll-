@@ -1,83 +1,81 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import TopNav from "./components/TopNav";
 import MapView from "./components/MapView";
 import TollPanel from "./components/TollPanel";
-import TopNav from "./components/TopNav";
 import TollPaymentModal from "./components/TollPaymentModal";
 import SuccessModal from "./components/SuccessModal";
 
-const App = () => {
-  const [activeToll, setActiveToll] = useState(null);
-  const [paymentState, setPaymentState] = useState("UNPAID");
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+
+import "./index.css";
+
+function App() {
+  const [activeZone, setActiveZone] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const handleZoneTriggered = (zone) => {
-    if (!activeToll || activeToll.id !== zone.id) {
-      setActiveToll(zone);
-      setPaymentState("UNPAID");
-    }
+  const handleZoneDetected = (zone) => {
+    setActiveZone({
+      ...zone,
+      status: "unpaid"
+    });
   };
 
-  useEffect(() => {
-    document.body.style.overflow =
-      showPaymentModal || showSuccessModal ? "hidden" : "hidden";
-  }, [showPaymentModal, showSuccessModal]);
+  const handlePaymentSuccess = () => {
+    setActiveZone((prev) =>
+      prev ? { ...prev, status: "paid" } : prev
+    );
+    setShowPaymentModal(false);
+    setShowSuccessModal(true);
+  };
 
   return (
-    <>
+    <Router>
       <TopNav />
 
-      <div style={styles.layout}>
-        <TollPanel
-          toll={activeToll}
-          paymentState={paymentState}
-          onPay={() => setShowPaymentModal(true)}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <main className="app-shell">
+                <section className="map-section">
+                  <MapView onTollTriggered={handleZoneDetected} />
+                </section>
+
+                <section className="toll-section">
+                  <TollPanel
+                    zone={activeZone}
+                    onMakePayment={() => setShowPaymentModal(true)}
+                  />
+                </section>
+              </main>
+
+              {showPaymentModal && activeZone && (
+                <TollPaymentModal
+                  toll={activeZone}       // ✅ contains zone_id
+                  onClose={() => setShowPaymentModal(false)}
+                  onSuccess={handlePaymentSuccess}
+                />
+              )}
+
+              {showSuccessModal && (
+                <SuccessModal
+                  onDone={() => setShowSuccessModal(false)}
+                />
+              )}
+            </>
+          }
         />
 
-        <div style={styles.map}>
-          <MapView onTollTriggered={handleZoneTriggered} />
-        </div>
-      </div>
-
-      {showPaymentModal && (
-        <TollPaymentModal
-          toll={activeToll}
-          onClose={() => setShowPaymentModal(false)}
-          onPending={() => setPaymentState("PENDING")}
-          onSuccess={() => {
-            setShowPaymentModal(false);
-            setShowSuccessModal(true);
-          }}
-          onFailed={() => {
-            setPaymentState("FAILED");
-            setShowPaymentModal(false);
-          }}
-        />
-      )}
-
-      {showSuccessModal && (
-        <SuccessModal
-          onDone={() => {
-            setPaymentState("PAID");
-            setShowSuccessModal(false);
-          }}
-        />
-      )}
-    </>
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
 export default App;
-
-/* ================= STYLES ================= */
-
-const styles = {
-  layout: {
-    display: "flex",
-    width: "100%",
-    height: "calc(100vh - 56px)"
-  },
-  map: {
-    flex: 1
-  }
-};
