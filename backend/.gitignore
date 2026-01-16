@@ -6,6 +6,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
 
 # =========================
 # Virtual Environments
@@ -15,6 +16,7 @@ venv/
 ENV/
 .venv/
 backend/venv/
+backend/env/
 
 # =========================
 # Build / Packaging
@@ -31,6 +33,7 @@ dist/
 .env
 .env.*
 .env.local
+.env.example
 
 # =========================
 # IDE / Editor
@@ -66,10 +69,36 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
 
 # =========================
-# Migrations & Seeds
+# Migrations & Seeds (optional)
 # =========================
-migrations/
-seed_*.py
-seeds/
+# Uncomment if you don't want to track migrations
+# */migrations/
+# **/migrations/
+seed_many_transactions.py
+seed_transactions.py
+
+# =========================
+# Flask/Python specific
+# =========================
+instance/
+.webassets-cache
+.scrapy
+
+# =========================
+# Celery
+# =========================
+celerybeat-schedule
+celerybeat.pid
+
+# =========================
+# Cache directories
+# =========================
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+stk_callbacks.json
+c2b_confirmations.json
