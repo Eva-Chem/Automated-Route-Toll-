@@ -14,6 +14,7 @@ Responsibilities:
 from datetime import datetime, timedelta
 from shapely.geometry import Point, Polygon
 from db import db, TollZone, TollPaid, TollEntry
+import json
 
 
 class GeoFencingService:
@@ -46,12 +47,27 @@ class GeoFencingService:
     @staticmethod
     def is_point_in_polygon(lat, lng, polygon_coords):
         """
-        polygon_coords: list of {"lat": x, "lng": y}
+        polygon_coords: Can be either:
+        1. GeoJSON format: {"type": "Polygon", "coordinates": [[[lng, lat], ...]]}
+        2. Simple list format: [{"lat": x, "lng": y}, ...]
+        3. JSON string of either format
         """
-        coords = [(c["lng"], c["lat"]) for c in polygon_coords]
-        polygon = Polygon(coords)
+        # Parse if it's a string
+        if isinstance(polygon_coords, str):
+            polygon_coords = json.loads(polygon_coords)
+        
+        # Handle GeoJSON format
+        if isinstance(polygon_coords, dict) and polygon_coords.get("type") == "Polygon":
+            # GeoJSON format: coordinates are [longitude, latitude]
+            coords = polygon_coords["coordinates"][0]  # Get outer ring
+            # coords are already in (lng, lat) format
+            polygon = Polygon(coords)
+        else:
+            # Simple format: [{"lat": x, "lng": y}, ...]
+            coords = [(c["lng"], c["lat"]) for c in polygon_coords]
+            polygon = Polygon(coords)
+        
         point = Point(lng, lat)
-
         return polygon.contains(point) or polygon.touches(point)
 
     # --------------------------------------------------
@@ -65,9 +81,10 @@ class GeoFencingService:
             if GeoFencingService.is_point_in_polygon(
                 latitude, longitude, zone.polygon_coords
             ):
-                # Check for active entry (no exit yet)
+                # Check for active entry in THIS SPECIFIC ZONE (no exit yet)
                 existing_entry = TollEntry.query.filter_by(
-                    user_id=driver_id,  # Changed from driver_id to user_id
+                    user_id=driver_id,
+                    zone_id=zone.zone_id,
                     exit_time=None
                 ).first()
 
@@ -79,9 +96,10 @@ class GeoFencingService:
                         "message": "Driver already inside zone"
                     }
 
-                # Check last exit (30-minute rule)
+                # Check last exit from THIS ZONE (30-minute rule)
                 recent_exit = TollEntry.query.filter(
-                    TollEntry.user_id == driver_id,  # Changed from driver_id
+                    TollEntry.user_id == driver_id,
+                    TollEntry.zone_id == zone.zone_id,
                     TollEntry.exit_time.isnot(None)
                 ).order_by(TollEntry.exit_time.desc()).first()
 
@@ -95,9 +113,10 @@ class GeoFencingService:
                             "message": "Recently exited zone — no duplicate charge"
                         }
 
-                # Create new entry
+                # Create new entry with zone_id
                 entry = TollEntry(
-                    user_id=driver_id,  # Changed from driver_id
+                    user_id=driver_id,
+                    zone_id=zone.zone_id,
                     entry_time=datetime.utcnow()
                 )
                 db.session.add(entry)
@@ -123,7 +142,7 @@ class GeoFencingService:
     @staticmethod
     def record_zone_exit(driver_id):
         entry = TollEntry.query.filter_by(
-            user_id=driver_id,  # Changed from driver_id
+            user_id=driver_id,
             exit_time=None
         ).first()
 

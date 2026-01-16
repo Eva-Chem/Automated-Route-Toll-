@@ -26,11 +26,13 @@ class TollEntry(db.Model):
     
     entry_id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.user_id'), nullable=False)
+    zone_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('toll_zones.zone_id'), nullable=False)  # ADD THIS LINE
     entry_time = db.Column(db.DateTime, nullable=False)
     exit_time = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     user = db.relationship('User', backref='toll_entries')
+    zone = db.relationship('TollZone', backref='toll_entries')  # ADD THIS LINE
     
     def __repr__(self):
         return f'<TollEntry {self.entry_id}>'
