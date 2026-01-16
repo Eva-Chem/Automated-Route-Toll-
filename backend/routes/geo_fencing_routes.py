@@ -1,6 +1,7 @@
 # backend/routes/geo_fencing_routes.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import uuid
 from db import db, TollZone
 from services.geo_service import GeoFencingService
 
@@ -34,8 +35,17 @@ def check_location():
                 "error": error
             }), 400
         
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
+        # Get current user ID from JWT token (it's a string UUID)
+        current_user_id_str = get_jwt_identity()
+        
+        # Convert string to UUID object for database queries
+        try:
+            current_user_id = uuid.UUID(current_user_id_str)
+        except (ValueError, AttributeError) as e:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid user ID format: {str(e)}"
+            }), 400
         
         # Check zone entry
         result = GeoFencingService.check_zone_entry(
@@ -62,6 +72,9 @@ def check_location():
         return jsonify(response), 200
         
     except Exception as e:
+        import traceback
+        print(f" Error in check_location: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e)
@@ -73,7 +86,17 @@ def check_location():
 def exit_zone():
     """Record when driver exits a toll zone"""
     try:
-        current_user_id = get_jwt_identity()
+        # Get current user ID from JWT token (it's a string UUID)
+        current_user_id_str = get_jwt_identity()
+        
+        # Convert string to UUID object
+        try:
+            current_user_id = uuid.UUID(current_user_id_str)
+        except (ValueError, AttributeError):
+            return jsonify({
+                "success": False,
+                "error": "Invalid user ID format"
+            }), 400
         
         success = GeoFencingService.record_zone_exit(current_user_id)
         
@@ -89,6 +112,9 @@ def exit_zone():
             }), 404
             
     except Exception as e:
+        import traceback
+        print(f" Error in exit_zone: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e)
