@@ -1,4 +1,3 @@
-# backend/services/geo_service.py
 """
 Geo-Fencing Service
 File: backend/services/geo_service.py
@@ -51,6 +50,8 @@ class GeoFencingService:
         1. GeoJSON format: {"type": "Polygon", "coordinates": [[[lng, lat], ...]]}
         2. Simple list format: [{"lat": x, "lng": y}, ...]
         3. JSON string of either format
+        
+        NOTE: Includes auto-detection for reversed coordinates as a safety measure
         """
         # Parse if it's a string
         if isinstance(polygon_coords, str):
@@ -58,9 +59,23 @@ class GeoFencingService:
         
         # Handle GeoJSON format
         if isinstance(polygon_coords, dict) and polygon_coords.get("type") == "Polygon":
-            # GeoJSON format: coordinates are [longitude, latitude]
+            # GeoJSON format: coordinates should be [longitude, latitude]
             coords = polygon_coords["coordinates"][0]  # Get outer ring
-            # coords are already in (lng, lat) format
+            
+            # Safety check: Auto-detect if coordinates are reversed [lat, lng]
+            # This handles legacy data or incorrectly formatted coordinates
+            if coords and len(coords[0]) == 2:
+                first_val = coords[0][0]
+                second_val = coords[0][1]
+                
+                # Heuristic: If first value is within latitude range (-90 to 90)
+                # and second value is outside that range (likely longitude),
+                # then coordinates are reversed
+                if abs(first_val) <= 90 and abs(second_val) > 90:
+                    # Coordinates are reversed [lat, lng], swap to [lng, lat]
+                    coords = [(lng, lat) for lat, lng in coords]
+                    print(f"⚠️  Auto-corrected reversed coordinates for polygon")
+            
             polygon = Polygon(coords)
         else:
             # Simple format: [{"lat": x, "lng": y}, ...]
@@ -75,6 +90,17 @@ class GeoFencingService:
     # --------------------------------------------------
     @staticmethod
     def check_zone_entry(driver_id, latitude, longitude):
+        """
+        Check if driver has entered a toll zone
+        
+        Args:
+            driver_id: UUID of the driver
+            latitude: GPS latitude coordinate
+            longitude: GPS longitude coordinate
+            
+        Returns:
+            dict: Contains zone info, payment trigger status, and message
+        """
         active_zones = TollZone.query.all()
 
         for zone in active_zones:
@@ -96,7 +122,7 @@ class GeoFencingService:
                         "message": "Driver already inside zone"
                     }
 
-                # Check last exit from THIS ZONE (30-minute rule)
+                # Check last exit from THIS ZONE (30-minute grace period rule)
                 recent_exit = TollEntry.query.filter(
                     TollEntry.user_id == driver_id,
                     TollEntry.zone_id == zone.zone_id,
@@ -141,6 +167,15 @@ class GeoFencingService:
     # --------------------------------------------------
     @staticmethod
     def record_zone_exit(driver_id):
+        """
+        Record when a driver exits their current toll zone
+        
+        Args:
+            driver_id: UUID of the driver
+            
+        Returns:
+            bool: True if exit was recorded, False if no active entry found
+        """
         entry = TollEntry.query.filter_by(
             user_id=driver_id,
             exit_time=None
