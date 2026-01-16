@@ -1,8 +1,11 @@
+# backend/routes/mpesa_routes.py
 from flask import Blueprint, request, jsonify
 import json
+import uuid
+from datetime import datetime
 from services.mpesa_service import MpesaService
 from services.config import MpesaConfig
-from db import db, TollPaid
+from db import db, TollPaid, TollZone
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
@@ -14,16 +17,136 @@ def stk_push():
         data = request.get_json()
         phone = data.get("phone")
         amount = data.get("amount")
+        zone_id = data.get("zone_id")  # Optional: pass zone_id from frontend
 
         if not phone or not amount:
             return jsonify({"success": False, "error": "phone and amount are required"}), 400
 
+        # Initiate STK push
         response = MpesaService.stk_push(phone_number=phone, amount=amount)
+        
+        # If STK push initiated successfully, create a pending payment record
+        if response.get("ResponseCode") == "0":
+            checkout_request_id = response.get("CheckoutRequestID")
+            
+            # Create pending payment record
+            toll_payment = TollPaid(
+                id=uuid.uuid4(),
+                zone_id=uuid.UUID(zone_id) if zone_id else None,
+                amount=int(amount),
+                checkout_request_id=checkout_request_id,
+                status="PENDING",
+                created_at=datetime.utcnow()
+            )
+            
+            db.session.add(toll_payment)
+            db.session.commit()
+            
+            print(f"✅ Created pending payment record: {checkout_request_id}")
+        
         return jsonify({"success": True, "response": response}), 200
 
     except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error in STK push: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+@mpesa_bp.route("/stk/callback", methods=["POST"])
+def stk_callback():
+    """Handle M-Pesa STK Push callback"""
+    try:
+        data = request.get_json(force=True)
+        callback_data = data.get("Body", {}).get("stkCallback", {})
+        
+        result_code = callback_data.get("ResultCode")
+        checkout_request_id = callback_data.get("CheckoutRequestID")
+        result_desc = callback_data.get("ResultDesc")
+        
+        print("\n========== STK CALLBACK RECEIVED ==========")
+        print(json.dumps(data, indent=2))
+        print("==========================================")
+        
+        # Find the payment record by CheckoutRequestID
+        payment = TollPaid.query.filter_by(
+            checkout_request_id=checkout_request_id
+        ).first()
+        
+        if result_code == 0:
+            # Payment successful
+            print("✅ PAYMENT SUCCESSFUL")
+            
+            # Extract payment details from callback
+            callback_metadata = callback_data.get("CallbackMetadata", {})
+            items = callback_metadata.get("Item", [])
+            
+            # Parse metadata
+            mpesa_receipt = None
+            phone_number = None
+            transaction_date = None
+            amount = None
+            
+            for item in items:
+                name = item.get("Name")
+                value = item.get("Value")
+                
+                if name == "MpesaReceiptNumber":
+                    mpesa_receipt = value
+                elif name == "PhoneNumber":
+                    phone_number = str(value)
+                elif name == "TransactionDate":
+                    transaction_date = value
+                elif name == "Amount":
+                    amount = value
+            
+            # Update existing payment record or create new one
+            if payment:
+                payment.status = "COMPLETED"
+                payment.mpesa_receipt_number = mpesa_receipt  # Store receipt number
+                payment.phone_number = phone_number  # Store phone number
+                print(f"✅ Updated payment record: {checkout_request_id}")
+                print(f"   Receipt: {mpesa_receipt}")
+                print(f"   Phone: {phone_number}")
+                print(f"   Amount: {amount}")
+            else:
+                # Create new record if it doesn't exist
+                payment = TollPaid(
+                    id=uuid.uuid4(),
+                    zone_id=None,
+                    amount=int(amount) if amount else 0,
+                    checkout_request_id=checkout_request_id,
+                    mpesa_receipt_number=mpesa_receipt,  # Store receipt number
+                    phone_number=phone_number,  # Store phone number
+                    status="COMPLETED",
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(payment)
+                print(f"✅ Created new payment record: {checkout_request_id}")
+                print(f"   Receipt: {mpesa_receipt}")
+            
+            # IMPORTANT: Commit the changes
+            db.session.commit()
+            print("✅ Database changes committed successfully")
+            
+        else:
+            # Payment failed or cancelled
+            print(f"❌ PAYMENT FAILED: {result_desc}")
+            
+            if payment:
+                payment.status = "FAILED"
+                db.session.commit()
+                print(f"✅ Updated payment status to FAILED: {checkout_request_id}")
+        
+        # Always return success to M-Pesa
+        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+    
+    except Exception as e:
+        print(f"❌ Error processing STK callback: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        db.session.rollback()
+        # Still return success to M-Pesa to avoid retries
+        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
 
 @mpesa_bp.route('/c2b/simulate', methods=['POST'])
 def simulate_c2b():
@@ -48,28 +171,6 @@ def simulate_c2b():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@mpesa_bp.route("/stk/callback", methods=["POST"])
-def stk_callback():
-    try:
-        data = request.get_json(force=True)
-        callback_data = data.get("Body", {}).get("stkCallback", {})
-        result_code = callback_data.get("ResultCode")
-        
-        print("\n========== STK CALLBACK RECEIVED ==========")
-        print(json.dumps(data, indent=2))
-        print("==========================================")
-        
-        if result_code == 0:
-            print("✅ PAYMENT SUCCESSFUL")
-        else:
-            print("❌ PAYMENT FAILED:", callback_data.get("ResultDesc"))
-        
-        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-    
-    except Exception as e:
-        print(f"❌ Error processing STK callback: {str(e)}")
-        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-    
 @mpesa_bp.route("/c2b/validate", methods=["POST"])
 def c2b_validate():
     """Validate C2B payment before processing"""

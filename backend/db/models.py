@@ -59,12 +59,15 @@ class TollZone(db.Model):
 # -----------------------------
 # Tolls Paid Table
 # -----------------------------
+
 class TollPaid(db.Model):
     __tablename__ = "tolls_paid"
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    zone_id = db.Column(UUID(as_uuid=True), nullable=False)
+    zone_id = db.Column(UUID(as_uuid=True), nullable=True)  # Made nullable
     amount = db.Column(db.Integer, nullable=False)
-    checkout_request_id = db.Column(db.String, nullable=True)
+    checkout_request_id = db.Column(db.String, nullable=True)  # STK CheckoutRequestID
+    mpesa_receipt_number = db.Column(db.String, nullable=True)  # Add this new field
+    phone_number = db.Column(db.String, nullable=True)  # Optional: store phone
     status = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
