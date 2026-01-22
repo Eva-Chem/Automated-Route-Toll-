@@ -6,6 +6,7 @@ from datetime import datetime
 from services.mpesa_service import MpesaService
 from services.config import MpesaConfig
 from db import db, TollPaid, TollZone
+from sqlalchemy import func
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
@@ -17,19 +18,16 @@ def stk_push():
         data = request.get_json()
         phone = data.get("phone")
         amount = data.get("amount")
-        zone_id = data.get("zone_id")  # Optional: pass zone_id from frontend
+        zone_id = data.get("zone_id")
 
         if not phone or not amount:
             return jsonify({"success": False, "error": "phone and amount are required"}), 400
 
-        # Initiate STK push
         response = MpesaService.stk_push(phone_number=phone, amount=amount)
         
-        # If STK push initiated successfully, create a pending payment record
         if response.get("ResponseCode") == "0":
             checkout_request_id = response.get("CheckoutRequestID")
             
-            # Create pending payment record
             toll_payment = TollPaid(
                 id=uuid.uuid4(),
                 zone_id=uuid.UUID(zone_id) if zone_id else None,
@@ -67,20 +65,16 @@ def stk_callback():
         print(json.dumps(data, indent=2))
         print("==========================================")
         
-        # Find the payment record by CheckoutRequestID
         payment = TollPaid.query.filter_by(
             checkout_request_id=checkout_request_id
         ).first()
         
         if result_code == 0:
-            # Payment successful
             print("✅ PAYMENT SUCCESSFUL")
             
-            # Extract payment details from callback
             callback_metadata = callback_data.get("CallbackMetadata", {})
             items = callback_metadata.get("Item", [])
             
-            # Parse metadata
             mpesa_receipt = None
             phone_number = None
             transaction_date = None
@@ -99,24 +93,22 @@ def stk_callback():
                 elif name == "Amount":
                     amount = value
             
-            # Update existing payment record or create new one
             if payment:
                 payment.status = "COMPLETED"
-                payment.mpesa_receipt_number = mpesa_receipt  # Store receipt number
-                payment.phone_number = phone_number  # Store phone number
+                payment.mpesa_receipt_number = mpesa_receipt
+                payment.phone_number = phone_number
                 print(f"✅ Updated payment record: {checkout_request_id}")
                 print(f"   Receipt: {mpesa_receipt}")
                 print(f"   Phone: {phone_number}")
                 print(f"   Amount: {amount}")
             else:
-                # Create new record if it doesn't exist
                 payment = TollPaid(
                     id=uuid.uuid4(),
                     zone_id=None,
                     amount=int(amount) if amount else 0,
                     checkout_request_id=checkout_request_id,
-                    mpesa_receipt_number=mpesa_receipt,  # Store receipt number
-                    phone_number=phone_number,  # Store phone number
+                    mpesa_receipt_number=mpesa_receipt,
+                    phone_number=phone_number,
                     status="COMPLETED",
                     created_at=datetime.utcnow()
                 )
@@ -124,12 +116,10 @@ def stk_callback():
                 print(f"✅ Created new payment record: {checkout_request_id}")
                 print(f"   Receipt: {mpesa_receipt}")
             
-            # IMPORTANT: Commit the changes
             db.session.commit()
             print("✅ Database changes committed successfully")
             
         else:
-            # Payment failed or cancelled
             print(f"❌ PAYMENT FAILED: {result_desc}")
             
             if payment:
@@ -137,7 +127,6 @@ def stk_callback():
                 db.session.commit()
                 print(f"✅ Updated payment status to FAILED: {checkout_request_id}")
         
-        # Always return success to M-Pesa
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
     
     except Exception as e:
@@ -145,60 +134,121 @@ def stk_callback():
         import traceback
         print(traceback.format_exc())
         db.session.rollback()
-        # Still return success to M-Pesa to avoid retries
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+
+
 @mpesa_bp.route("/status/<string:checkout_request_id>", methods=["GET"])
 def get_payment_status(checkout_request_id):
     """
     Frontend polls this endpoint to know the STK payment status
+    DEBUGGED VERSION with extensive logging
     """
     try:
+        # Clean the input
+        original_id = checkout_request_id
         checkout_request_id = checkout_request_id.strip()
         
-        payment = TollPaid.query.filter_by(
-            checkout_request_id=checkout_request_id
+        print(f"\n{'='*60}")
+        print(f"🔍 PAYMENT STATUS CHECK")
+        print(f"{'='*60}")
+        print(f"Original ID: '{original_id}'")
+        print(f"Cleaned ID:  '{checkout_request_id}'")
+        print(f"ID Length:   {len(checkout_request_id)}")
+        print(f"{'='*60}\n")
+        
+        # Try exact match first
+        payment = TollPaid.query.filter(
+            TollPaid.checkout_request_id == checkout_request_id
         ).first()
+        
+        if payment:
+            print(f"✅ FOUND (exact match)")
+            print(f"   Payment ID: {payment.id}")
+            print(f"   Status: {payment.status}")
+            print(f"   Amount: {payment.amount}")
+            print(f"   Receipt: {payment.mpesa_receipt_number}")
+        else:
+            print(f"❌ NOT FOUND (exact match)")
+            
+            # Try case-insensitive search
+            print(f"\n🔄 Trying case-insensitive search...")
+            payment = TollPaid.query.filter(
+                func.lower(TollPaid.checkout_request_id) == checkout_request_id.lower()
+            ).first()
+            
+            if payment:
+                print(f"✅ FOUND (case-insensitive)")
+                print(f"   Actual ID in DB: '{payment.checkout_request_id}'")
+            else:
+                print(f"❌ NOT FOUND (case-insensitive)")
+                
+                # Show all similar IDs
+                print(f"\n📋 Searching for similar checkout IDs...")
+                similar_payments = TollPaid.query.filter(
+                    TollPaid.checkout_request_id.contains(checkout_request_id[-10:])
+                ).limit(5).all()
+                
+                if similar_payments:
+                    print(f"Found {len(similar_payments)} similar IDs:")
+                    for p in similar_payments:
+                        print(f"   - '{p.checkout_request_id}' (status: {p.status})")
+                else:
+                    print(f"No similar IDs found")
+                
+                # Show last 10 payments
+                print(f"\n📊 Last 10 payments in database:")
+                recent_payments = TollPaid.query.order_by(
+                    TollPaid.created_at.desc()
+                ).limit(10).all()
+                
+                for p in recent_payments:
+                    print(f"   ID: '{p.checkout_request_id}'")
+                    print(f"      Status: {p.status}, Amount: {p.amount}, Created: {p.created_at}")
+        
+        print(f"\n{'='*60}\n")
 
         if not payment:
             return jsonify({
                 "success": False,
-                "error": "Payment not found"
+                "error": "Payment not found",
+                "searched_id": checkout_request_id,
+                "id_length": len(checkout_request_id)
             }), 404
 
-        # Normalize DB status → frontend status
-        if payment.status == "PENDING":
-            return jsonify({
-                "success": True,
-                "status": "pending"
-            }), 200
-
+        # Return status based on payment.status
+        response_data = {
+            "success": True,
+            "status": payment.status.lower()
+        }
+        
         if payment.status == "COMPLETED":
-            return jsonify({
-                "success": True,
+            response_data.update({
                 "status": "paid",
                 "receipt": payment.mpesa_receipt_number,
                 "amount": payment.amount,
                 "phone": payment.phone_number
-            }), 200
-
-        if payment.status == "FAILED":
-            return jsonify({
-                "success": True,
+            })
+        elif payment.status == "FAILED":
+            response_data.update({
                 "status": "failed",
                 "reason": "Payment failed or was cancelled"
-            }), 200
+            })
+        elif payment.status == "PENDING":
+            response_data.update({
+                "status": "pending"
+            })
 
-        # Fallback (should not happen)
-        return jsonify({
-            "success": True,
-            "status": "pending"
-        }), 200
+        return jsonify(response_data), 200
 
     except Exception as e:
+        print(f"❌ ERROR in get_payment_status: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
+
 
 @mpesa_bp.route('/c2b/simulate', methods=['POST'])
 def simulate_c2b():
