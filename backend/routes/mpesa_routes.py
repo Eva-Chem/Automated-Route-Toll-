@@ -153,6 +153,8 @@ def get_payment_status(checkout_request_id):
     Frontend polls this endpoint to know the STK payment status
     """
     try:
+        checkout_request_id = checkout_request_id.strip()
+        
         payment = TollPaid.query.filter_by(
             checkout_request_id=checkout_request_id
         ).first()
