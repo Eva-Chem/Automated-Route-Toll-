@@ -6,7 +6,6 @@ from datetime import datetime
 from services.mpesa_service import MpesaService
 from services.config import MpesaConfig
 from db import db, TollPaid, TollZone
-from sqlalchemy import func
 
 mpesa_bp = Blueprint("mpesa", __name__, url_prefix="/payments")
 
@@ -39,14 +38,11 @@ def stk_push():
             
             db.session.add(toll_payment)
             db.session.commit()
-            
-            print(f"✅ Created pending payment record: {checkout_request_id}")
         
         return jsonify({"success": True, "response": response}), 200
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error in STK push: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -61,23 +57,16 @@ def stk_callback():
         checkout_request_id = callback_data.get("CheckoutRequestID")
         result_desc = callback_data.get("ResultDesc")
         
-        print("\n========== STK CALLBACK RECEIVED ==========")
-        print(json.dumps(data, indent=2))
-        print("==========================================")
-        
         payment = TollPaid.query.filter_by(
             checkout_request_id=checkout_request_id
         ).first()
         
         if result_code == 0:
-            print("✅ PAYMENT SUCCESSFUL")
-            
             callback_metadata = callback_data.get("CallbackMetadata", {})
             items = callback_metadata.get("Item", [])
             
             mpesa_receipt = None
             phone_number = None
-            transaction_date = None
             amount = None
             
             for item in items:
@@ -88,8 +77,6 @@ def stk_callback():
                     mpesa_receipt = value
                 elif name == "PhoneNumber":
                     phone_number = str(value)
-                elif name == "TransactionDate":
-                    transaction_date = value
                 elif name == "Amount":
                     amount = value
             
@@ -97,10 +84,6 @@ def stk_callback():
                 payment.status = "COMPLETED"
                 payment.mpesa_receipt_number = mpesa_receipt
                 payment.phone_number = phone_number
-                print(f"✅ Updated payment record: {checkout_request_id}")
-                print(f"   Receipt: {mpesa_receipt}")
-                print(f"   Phone: {phone_number}")
-                print(f"   Amount: {amount}")
             else:
                 payment = TollPaid(
                     id=uuid.uuid4(),
@@ -113,113 +96,38 @@ def stk_callback():
                     created_at=datetime.utcnow()
                 )
                 db.session.add(payment)
-                print(f"✅ Created new payment record: {checkout_request_id}")
-                print(f"   Receipt: {mpesa_receipt}")
             
             db.session.commit()
-            print("✅ Database changes committed successfully")
             
         else:
-            print(f"❌ PAYMENT FAILED: {result_desc}")
-            
             if payment:
                 payment.status = "FAILED"
                 db.session.commit()
-                print(f"✅ Updated payment status to FAILED: {checkout_request_id}")
         
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
     
     except Exception as e:
-        print(f"❌ Error processing STK callback: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
         db.session.rollback()
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
 
 
 @mpesa_bp.route("/status/<string:checkout_request_id>", methods=["GET"])
 def get_payment_status(checkout_request_id):
-    """
-    Frontend polls this endpoint to know the STK payment status
-    DEBUGGED VERSION with extensive logging
-    """
+    """Get payment status by CheckoutRequestID"""
     try:
-        # Clean the input
-        original_id = checkout_request_id
         checkout_request_id = checkout_request_id.strip()
         
-        print(f"\n{'='*60}")
-        print(f"🔍 PAYMENT STATUS CHECK")
-        print(f"{'='*60}")
-        print(f"Original ID: '{original_id}'")
-        print(f"Cleaned ID:  '{checkout_request_id}'")
-        print(f"ID Length:   {len(checkout_request_id)}")
-        print(f"{'='*60}\n")
-        
-        # Try exact match first
-        payment = TollPaid.query.filter(
-            TollPaid.checkout_request_id == checkout_request_id
+        payment = TollPaid.query.filter_by(
+            checkout_request_id=checkout_request_id
         ).first()
-        
-        if payment:
-            print(f"✅ FOUND (exact match)")
-            print(f"   Payment ID: {payment.id}")
-            print(f"   Status: {payment.status}")
-            print(f"   Amount: {payment.amount}")
-            print(f"   Receipt: {payment.mpesa_receipt_number}")
-        else:
-            print(f"❌ NOT FOUND (exact match)")
-            
-            # Try case-insensitive search
-            print(f"\n🔄 Trying case-insensitive search...")
-            payment = TollPaid.query.filter(
-                func.lower(TollPaid.checkout_request_id) == checkout_request_id.lower()
-            ).first()
-            
-            if payment:
-                print(f"✅ FOUND (case-insensitive)")
-                print(f"   Actual ID in DB: '{payment.checkout_request_id}'")
-            else:
-                print(f"❌ NOT FOUND (case-insensitive)")
-                
-                # Show all similar IDs
-                print(f"\n📋 Searching for similar checkout IDs...")
-                similar_payments = TollPaid.query.filter(
-                    TollPaid.checkout_request_id.contains(checkout_request_id[-10:])
-                ).limit(5).all()
-                
-                if similar_payments:
-                    print(f"Found {len(similar_payments)} similar IDs:")
-                    for p in similar_payments:
-                        print(f"   - '{p.checkout_request_id}' (status: {p.status})")
-                else:
-                    print(f"No similar IDs found")
-                
-                # Show last 10 payments
-                print(f"\n📊 Last 10 payments in database:")
-                recent_payments = TollPaid.query.order_by(
-                    TollPaid.created_at.desc()
-                ).limit(10).all()
-                
-                for p in recent_payments:
-                    print(f"   ID: '{p.checkout_request_id}'")
-                    print(f"      Status: {p.status}, Amount: {p.amount}, Created: {p.created_at}")
-        
-        print(f"\n{'='*60}\n")
 
         if not payment:
             return jsonify({
                 "success": False,
-                "error": "Payment not found",
-                "searched_id": checkout_request_id,
-                "id_length": len(checkout_request_id)
+                "error": "Payment not found"
             }), 404
 
-        # Return status based on payment.status
-        response_data = {
-            "success": True,
-            "status": payment.status.lower()
-        }
+        response_data = {"success": True}
         
         if payment.status == "COMPLETED":
             response_data.update({
@@ -241,9 +149,6 @@ def get_payment_status(checkout_request_id):
         return jsonify(response_data), 200
 
     except Exception as e:
-        print(f"❌ ERROR in get_payment_status: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({
             "success": False,
             "error": str(e)
@@ -278,11 +183,9 @@ def c2b_validate():
     """Validate C2B payment before processing"""
     try:
         data = request.get_json()
-        print(f"\n C2B Validation: {json.dumps(data, indent=2)}\n")
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
         
     except Exception as e:
-        print(f"Validation error: {str(e)}")
         return jsonify({"ResultCode": 1, "ResultDesc": "Rejected"})
 
 
@@ -291,14 +194,9 @@ def c2b_confirm():
     """Confirm C2B payment"""
     try:
         data = request.get_json(force=True)
-        print("\n========== C2B PAYMENT CONFIRMED ==========")
-        print(json.dumps(data, indent=2))
-        print("==========================================")
-                
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
 
     except Exception as e:
-        print(f"Error processing C2B confirmation: {str(e)}")
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
 
 
