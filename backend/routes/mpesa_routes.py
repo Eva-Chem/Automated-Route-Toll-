@@ -147,6 +147,56 @@ def stk_callback():
         db.session.rollback()
         # Still return success to M-Pesa to avoid retries
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+@mpesa_bp.route("/status/<string:checkout_request_id>", methods=["GET"])
+def get_payment_status(checkout_request_id):
+    """
+    Frontend polls this endpoint to know the STK payment status
+    """
+    try:
+        payment = TollPaid.query.filter_by(
+            checkout_request_id=checkout_request_id
+        ).first()
+
+        if not payment:
+            return jsonify({
+                "success": False,
+                "error": "Payment not found"
+            }), 404
+
+        # Normalize DB status → frontend status
+        if payment.status == "PENDING":
+            return jsonify({
+                "success": True,
+                "status": "pending"
+            }), 200
+
+        if payment.status == "COMPLETED":
+            return jsonify({
+                "success": True,
+                "status": "paid",
+                "receipt": payment.mpesa_receipt_number,
+                "amount": payment.amount,
+                "phone": payment.phone_number
+            }), 200
+
+        if payment.status == "FAILED":
+            return jsonify({
+                "success": True,
+                "status": "failed",
+                "reason": "Payment failed or was cancelled"
+            }), 200
+
+        # Fallback (should not happen)
+        return jsonify({
+            "success": True,
+            "status": "pending"
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @mpesa_bp.route('/c2b/simulate', methods=['POST'])
 def simulate_c2b():
