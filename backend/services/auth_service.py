@@ -19,3 +19,7 @@ def authenticate(username, password):
         return user
     
     return None
+
+def get_user_role(user):
+    """Get user role"""
+    return user.role if user else None

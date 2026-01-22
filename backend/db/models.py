@@ -13,6 +13,13 @@ class User(db.Model):
     user_id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), nullable=False, default='toll_operator')
+
+    def is_admin(self):
+        return self.role == 'admin'
+    
+    def is_toll_operator(self):
+        return self.role == 'toll_operator'
     
     def __repr__(self):
         return f'<User {self.username}>'

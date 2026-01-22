@@ -14,9 +14,14 @@ def register():
         data = request.get_json()
         username = data.get("username")
         password = data.get("password")
+        role = data.get("role", "toll_operator")  # NEW: Get role, default to toll_operator
 
         if not username or not password:
             return jsonify({"error": "Username and password are required"}), 400
+
+        # NEW: Validate role
+        if role not in ["admin", "toll_operator"]:
+            return jsonify({"error": "Invalid role. Must be 'admin' or 'toll_operator'"}), 400
 
         # Check if user already exists
         existing_user = User.query.filter_by(username=username).first()
@@ -28,7 +33,8 @@ def register():
         new_user = User(
             user_id=uuid.uuid4(),
             username=username,
-            password_hash=password_hash
+            password_hash=password_hash,
+            role=role  # NEW: Add role
         )
 
         db.session.add(new_user)
@@ -38,7 +44,8 @@ def register():
             "message": "User registered successfully",
             "user": {
                 "user_id": str(new_user.user_id),
-                "username": new_user.username
+                "username": new_user.username,
+                "role": new_user.role  # NEW: Return role
             }
         }), 201
 
@@ -64,15 +71,19 @@ def login():
         if not user or not check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid username or password"}), 401
 
-        # Create access token with user_id as STRING 
-        access_token = create_access_token(identity=str(user.user_id))
+        # NEW: Create access token with role in additional claims
+        access_token = create_access_token(
+            identity=str(user.user_id),
+            additional_claims={"role": user.role}  # Include role in JWT
+        )
 
         return jsonify({
             "message": "Login successful",
             "token": access_token,
             "user": {
                 "user_id": str(user.user_id),
-                "username": user.username
+                "username": user.username,
+                "role": user.role  # NEW: Return role
             }
         }), 200
 
