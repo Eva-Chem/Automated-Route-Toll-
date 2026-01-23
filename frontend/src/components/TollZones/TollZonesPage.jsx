@@ -31,13 +31,13 @@ const modalStyles = {
  * 
  * RBAC Rules (enforced):
  * - Admin: view-only (read zones, see on map)
- * - toll_operator: full CRUD (create, read, update zones; DELETE disabled pending backend)
+ * - toll_operator: full CRUD (create, read, update, delete zones)
  * 
  * Field mappings (backend contract):
  * - zone_id: zone identifier (UUID from backend)
  * - zone_name: zone display name
  * - charge_amount: toll charge in currency
- * - polygon_coords: array of [lat, lng] pairs
+ * - polygon_coords: GeoJSON Polygon or [lat, lng] array pairs
  */
 export default function TollZones() {
   const { user } = useAuth();
