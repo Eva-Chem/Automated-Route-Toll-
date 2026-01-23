@@ -107,3 +107,33 @@ def update_toll_zone(zone_id):
             "success": False,
             "error": str(e)
         }), 500
+
+
+# --------------------------------
+# DELETE a toll zone ✅
+# --------------------------------
+@toll_zones_bp.route("/toll-zones/<uuid:zone_id>", methods=["DELETE"])
+def delete_toll_zone(zone_id):
+    zone = TollZone.query.filter_by(zone_id=zone_id).first()
+
+    if not zone:
+        return jsonify({
+            "success": False,
+            "error": "Toll zone not found"
+        }), 404
+
+    try:
+        db.session.delete(zone)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Toll zone deleted successfully"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
