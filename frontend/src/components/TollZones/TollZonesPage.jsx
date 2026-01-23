@@ -3,17 +3,54 @@ import DashboardLayout from "../../layout/DashboardLayout";
 import MapCanvas from "../../map/MapCanvas";
 import { useZoneStore } from "../../store/zone.store";
 import { useAuth } from "../../auth/auth.context";
+import { ROLES } from "../../constants/roles";
+import { geoJSONToLatLngArray } from "../../utils/geo";
 
+const modalStyles = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1050,
+    padding: "1rem",
+  },
+  dialog: {
+    backgroundColor: "#fff",
+    borderRadius: "8px",
+    maxWidth: "420px",
+    width: "100%",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  },
+};
+
+/**
+ * TollZonesPage
+ * 
+ * RBAC Rules (enforced):
+ * - Admin: view-only (read zones, see on map)
+ * - toll_operator: full CRUD (create, read, update zones; DELETE disabled pending backend)
+ * 
+ * Field mappings (backend contract):
+ * - zone_id: zone identifier (UUID from backend)
+ * - zone_name: zone display name
+ * - charge_amount: toll charge in currency
+ * - polygon_coords: array of [lat, lng] pairs
+ */
 export default function TollZones() {
   const { user } = useAuth();
   const { zones, addZone, updateZone, deleteZone, fetchZones } = useZoneStore();
   const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingZone, setEditingZone] = useState(null);
+  const [zoneToDelete, setZoneToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    zone_name: "",
     charge_amount: "",
-    coordinates: [
+    polygon_coords: [
       { lat: "", lng: "" },
       { lat: "", lng: "" },
       { lat: "", lng: "" },
@@ -28,15 +65,14 @@ export default function TollZones() {
 
   const handleCreateZone = (coordinates) => {
     addZone({
-      id: Date.now(),
-      name: "New Toll Zone",
+      zone_name: "New Toll Zone",
       charge_amount: 0,
-      coordinates,
+      polygon_coords: coordinates,
     });
   };
 
-  const handleUpdateZone = (id, coordinates) => {
-    updateZone(id, { coordinates });
+  const handleUpdateZone = (zoneId, coordinates) => {
+    updateZone(zoneId, { polygon_coords: coordinates });
   };
 
   const handleFormChange = (e) => {
@@ -48,27 +84,27 @@ export default function TollZones() {
   };
 
   const handleCoordinateChange = (index, field, value) => {
-    const newCoords = [...formData.coordinates];
+    const newCoords = [...formData.polygon_coords];
     newCoords[index] = { ...newCoords[index], [field]: value };
     setFormData((prev) => ({
       ...prev,
-      coordinates: newCoords,
+      polygon_coords: newCoords,
     }));
   };
 
   const addCoordinatePoint = () => {
     setFormData((prev) => ({
       ...prev,
-      coordinates: [...prev.coordinates, { lat: "", lng: "" }],
+      polygon_coords: [...prev.polygon_coords, { lat: "", lng: "" }],
     }));
   };
 
   const removeCoordinatePoint = (index) => {
-    if (formData.coordinates.length > 3) {
-      const newCoords = formData.coordinates.filter((_, i) => i !== index);
+    if (formData.polygon_coords.length > 3) {
+      const newCoords = formData.polygon_coords.filter((_, i) => i !== index);
       setFormData((prev) => ({
         ...prev,
-        coordinates: newCoords,
+        polygon_coords: newCoords,
       }));
     }
   };
@@ -77,32 +113,32 @@ export default function TollZones() {
     e.preventDefault();
     
     // Validate and convert coordinates
-    const coordinates = formData.coordinates
+    const polygon_coords = formData.polygon_coords
       .filter((coord) => coord.lat && coord.lng)
       .map((coord) => [parseFloat(coord.lat), parseFloat(coord.lng)]);
 
-    if (coordinates.length < 3) {
+    if (polygon_coords.length < 3) {
       alert("Please provide at least 3 coordinate points to form a polygon.");
       return;
     }
 
     const zoneData = {
-      name: formData.name,
+      zone_name: formData.zone_name,
       charge_amount: parseFloat(formData.charge_amount),
-      coordinates,
+      polygon_coords: polygon_coords,
     };
 
     if (editingZone) {
-      await updateZone(editingZone.id, zoneData);
+      await updateZone(editingZone.zone_id, zoneData);
     } else {
-      await addZone({ ...zoneData, id: Date.now() });
+      await addZone(zoneData);
     }
 
     // Reset form
     setFormData({
-      name: "",
+      zone_name: "",
       charge_amount: "",
-      coordinates: [
+      polygon_coords: [
         { lat: "", lng: "" },
         { lat: "", lng: "" },
         { lat: "", lng: "" },
@@ -114,11 +150,16 @@ export default function TollZones() {
   };
 
   const handleEditZone = (zone) => {
+    const latlngs = geoJSONToLatLngArray(zone.polygon_coords);
+    if (!latlngs.length) {
+      console.warn("Zone has invalid polygon_coords; skipping edit:", zone.zone_name);
+      return;
+    }
     setEditingZone(zone);
     setFormData({
-      name: zone.name,
-      charge_amount: zone.charge_amount.toString(),
-      coordinates: zone.coordinates.map(([lat, lng]) => ({
+      zone_name: zone.zone_name,
+      charge_amount: zone.charge_amount?.toString() || "",
+      polygon_coords: latlngs.map(([lat, lng]) => ({
         lat: lat.toString(),
         lng: lng.toString(),
       })),
@@ -128,9 +169,9 @@ export default function TollZones() {
 
   const handleCancelForm = () => {
     setFormData({
-      name: "",
+      zone_name: "",
       charge_amount: "",
-      coordinates: [
+      polygon_coords: [
         { lat: "", lng: "" },
         { lat: "", lng: "" },
         { lat: "", lng: "" },
@@ -141,11 +182,38 @@ export default function TollZones() {
     setEditingZone(null);
   };
 
+  const handleRequestDelete = (zone) => {
+    setZoneToDelete(zone);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!zoneToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteZone(zoneToDelete.zone_id);
+    } catch (error) {
+      console.error("Failed to delete zone", error);
+      alert("Failed to delete zone. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setZoneToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    if (isDeleting) return;
+    setZoneToDelete(null);
+  };
+
+  const isOperator = user?.role === ROLES.TOLL_OPERATOR;
+  const isAdmin = user?.role === ROLES.ADMIN;
+
   return (
     <DashboardLayout>
       <h3 className="mb-4">Toll Zones</h3>
 
-      {user?.role === "operator" && (
+      {/* Show form button only for toll operators */}
+      {isOperator && (
         <div className="mb-3">
           <button
             className="btn btn-primary"
@@ -156,7 +224,8 @@ export default function TollZones() {
         </div>
       )}
 
-      {showForm && user?.role === "operator" && (
+      {/* Form visible only for toll operators */}
+      {showForm && isOperator && (
         <div className="card shadow-sm mb-4">
           <div className="card-header">
             <h5 className="mb-0">
@@ -171,8 +240,8 @@ export default function TollZones() {
                   <input
                     type="text"
                     className="form-control"
-                    name="name"
-                    value={formData.name}
+                    name="zone_name"
+                    value={formData.zone_name}
                     onChange={handleFormChange}
                     required
                     placeholder="e.g., CBD Toll Zone"
@@ -199,7 +268,7 @@ export default function TollZones() {
                 <p className="text-muted small">
                   Enter at least 3 points to form a polygon. Format: Latitude, Longitude
                 </p>
-                {formData.coordinates.map((coord, index) => (
+                {formData.polygon_coords.map((coord, index) => (
                   <div key={index} className="row mb-2">
                     <div className="col-md-5">
                       <input
@@ -226,7 +295,7 @@ export default function TollZones() {
                       />
                     </div>
                     <div className="col-md-2">
-                      {formData.coordinates.length > 3 && (
+                      {formData.polygon_coords.length > 3 && (
                         <button
                           type="button"
                           className="btn btn-danger btn-sm"
@@ -264,17 +333,19 @@ export default function TollZones() {
         </div>
       )}
 
+      {/* Map: show operators with edit mode, admins with view-only */}
       <div className="card shadow-sm mb-4">
         <div className="card-body">
           <MapCanvas
             zones={zones}
-            mode={user?.role === "operator" ? "operator" : "admin"}
-            onCreateZone={user?.role === "operator" ? handleCreateZone : undefined}
-            onUpdateZone={user?.role === "operator" ? handleUpdateZone : undefined}
+            mode={isOperator ? "operator" : "admin"}
+            onCreateZone={isOperator ? handleCreateZone : undefined}
+            onUpdateZone={isOperator ? handleUpdateZone : undefined}
           />
         </div>
       </div>
 
+      {/* Zone list: show edit/delete for operators, view-only for admin */}
       <div className="card">
         <div className="card-header">
           <h5 className="mb-0">Zone List</h5>
@@ -284,32 +355,32 @@ export default function TollZones() {
             <tr>
               <th>Name</th>
               <th>Charge (Ksh)</th>
-              {user?.role === "operator" && <th>Actions</th>}
+              {isOperator && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {zones.length === 0 ? (
               <tr>
-                <td colSpan={user?.role === "operator" ? 3 : 2} className="text-center text-muted">
+                <td colSpan={isOperator ? 3 : 2} className="text-center text-muted">
                   No zones available
                 </td>
               </tr>
             ) : (
               zones.map((zone) => (
-                <tr key={zone.id}>
-                  <td>{zone.name}</td>
+                <tr key={zone.zone_id}>
+                  <td>{zone.zone_name}</td>
                   <td>{zone.charge_amount}</td>
-                  {user?.role === "operator" && (
+                  {isOperator && (
                     <td>
                       <button
-                        className="btn btn-sm btn-warning me-2"
+                        className="btn btn-sm btn-warning"
                         onClick={() => handleEditZone(zone)}
                       >
                         Edit
                       </button>
                       <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => deleteZone(zone.id)}
+                        className="btn btn-sm btn-danger ms-2"
+                        onClick={() => handleRequestDelete(zone)}
                       >
                         Delete
                       </button>
@@ -321,6 +392,33 @@ export default function TollZones() {
           </tbody>
         </table>
       </div>
+
+      {zoneToDelete && (
+        <div style={modalStyles.backdrop} role="dialog" aria-modal="true">
+          <div style={modalStyles.dialog} className="p-4">
+            <h5 className="mb-3">Confirm Delete</h5>
+            <p className="mb-4">
+              Are you sure you want to delete "{zoneToDelete.zone_name}"? This action cannot be undone.
+            </p>
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                className="btn btn-secondary"
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

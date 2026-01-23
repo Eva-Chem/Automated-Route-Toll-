@@ -6,10 +6,11 @@ import OperatorDashboard from "../operator/OperatorDashboard";
 import TollZonesPage from "../components/TollZones/TollZonesPage";
 import { useAuth } from "../auth/auth.context";
 import Login from "../auth/Login";
+import { ROLES } from "../constants/roles";
 
 function HomeRedirect() {
   const { user } = useAuth();
-  return <Navigate to={user.role === "admin" ? "/dashboard" : "/operator"} />;
+  return <Navigate to={user.role === ROLES.ADMIN ? "/dashboard" : "/operator"} />;
 }
 
 export default function Router() {
@@ -19,10 +20,11 @@ export default function Router() {
 
       <Route path="/login" element={<Login />} />
 
+      {/* Admin Routes: View-only access to zones and transactions */}
       <Route
         path="/dashboard"
         element={
-          <RequireRole allow={["admin"]}>
+          <RequireRole allow={[ROLES.ADMIN]}>
             <AdminDashboard />
           </RequireRole>
         }
@@ -31,7 +33,7 @@ export default function Router() {
       <Route
         path="/dashboard/transactions"
         element={
-          <RequireRole allow={["admin"]}>
+          <RequireRole allow={[ROLES.ADMIN]}>
             <TransactionsPage />
           </RequireRole>
         }
@@ -40,16 +42,17 @@ export default function Router() {
       <Route
         path="/dashboard/zones"
         element={
-          <RequireRole allow={["admin"]}>
+          <RequireRole allow={[ROLES.ADMIN]}>
             <TollZonesPage />
           </RequireRole>
         }
       />
 
+      {/* Toll Operator Routes: Full CRUD access to zones (except DELETE) */}
       <Route
         path="/operator"
         element={
-          <RequireRole allow={["operator"]}>
+          <RequireRole allow={[ROLES.TOLL_OPERATOR]}>
             <OperatorDashboard />
           </RequireRole>
         }
@@ -58,7 +61,7 @@ export default function Router() {
       <Route
         path="/operator/zones"
         element={
-          <RequireRole allow={["operator"]}>
+          <RequireRole allow={[ROLES.TOLL_OPERATOR]}>
             <TollZonesPage />
           </RequireRole>
         }

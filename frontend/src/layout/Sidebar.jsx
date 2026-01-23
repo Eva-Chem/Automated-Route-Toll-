@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/auth.context";
+import { ROLES } from "../constants/roles";
 
 export default function Sidebar() {
   const { user } = useAuth();
@@ -9,7 +10,7 @@ export default function Sidebar() {
       <h5 className="fw-bold mb-4">Automated Toll</h5>
 
       <ul className="nav flex-column gap-2">
-        {user.role === "admin" && (
+        {user.role === ROLES.ADMIN && (
           <>
             <li className="nav-item">
               <NavLink className="nav-link" to="/dashboard" end>Dashboard</NavLink>
@@ -23,7 +24,7 @@ export default function Sidebar() {
           </>
         )}
 
-        {user.role === "operator" && (
+        {user.role === ROLES.TOLL_OPERATOR && (
           <>
             <li className="nav-item">
               <NavLink className="nav-link" to="/operator" end>Operator Home</NavLink>

@@ -1,24 +1,8 @@
 import { createContext, useContext, useState } from "react";
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 const AuthContext = createContext();
-
-// Mock user database - In production, this would be handled by the backend
-const MOCK_USERS = {
-  admin: {
-    username: "admin",
-    password: "admin123",
-    name: "Administrator",
-    role: "admin",
-    email: "admin@tolls.com",
-  },
-  operator: {
-    username: "operator",
-    password: "operator123",
-    name: "Toll Operator",
-    role: "operator",
-    email: "operator@tolls.com",
-  },
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -31,46 +15,44 @@ export function AuthProvider({ children }) {
   });
 
   const login = async (username, password) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Find user by username
-        const userRecord = Object.values(MOCK_USERS).find(
-          (u) => u.username === username
-        );
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
+        { username, password }
+      );
 
-        if (!userRecord) {
-          resolve({
-            success: false,
-            error: "Invalid username or password",
-          });
-          return;
-        }
+      const { token: authToken, user: userData } = response.data;
 
-        // Verify password
-        if (userRecord.password !== password) {
-          resolve({
-            success: false,
-            error: "Invalid username or password",
-          });
-          return;
-        }
+      // Decode JWT to verify and extract claims
+      const decoded = jwtDecode(authToken);
+      
+      // Merge backend user data with decoded claims
+      const userWithRole = {
+        ...userData,
+        role: decoded.role || userData.role, // Use role from JWT claims
+      };
 
-        // Create user session (exclude password)
-        const { password: _, ...userData } = userRecord;
-        const authToken = btoa(`${username}:${password}:${Date.now()}`); // Simple token generation
+      setUser(userWithRole);
+      setToken(authToken);
+      localStorage.setItem("auth_user", JSON.stringify(userWithRole));
+      localStorage.setItem("auth_token", authToken);
 
-        setUser(userData);
-        setToken(authToken);
-        localStorage.setItem("auth_user", JSON.stringify(userData));
-        localStorage.setItem("auth_token", authToken);
+      return {
+        success: true,
+        user: userWithRole,
+        token: authToken,
+      };
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Invalid username or password";
 
-        resolve({
-          success: true,
-          user: userData,
-          token: authToken,
-        });
-      }, 800); // Simulate network delay
-    });
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   };
 
   const logout = () => {

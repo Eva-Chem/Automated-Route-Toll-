@@ -1,25 +1,37 @@
 import { create } from "zustand";
 import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone as apiDelete } from "../components/TollZones/tollZones.api";
 
+/**
+ * Zone Store
+ * 
+ * Single source of truth for toll zones state.
+ * 
+ * Key alignment rules (backend contract):
+ * - zones is always an array (never wrapped in {success, data})
+ * - zone identifiers are zone_id (not id)
+ * - all filters, updates, and deletions use zone_id
+ *
+ * DELETE is supported by backend.
+ */
 export const useZoneStore = create((set, get) => ({
   zones: [],
   loading: false,
   error: null,
 
-  // Fetch zones from API
+  // Fetch zones from API - API layer already normalizes to array
   fetchZones: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await getZones();
-      const data = response.data || response;
-      set({ zones: data, loading: false });
+      const zones = await getZones();
+      // getZones() API already returns normalized array
+      set({ zones: Array.isArray(zones) ? zones : [], loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
       console.error("Failed to fetch zones:", error);
     }
   },
 
-  // Add a new zone
+  // Add a new zone - API returns normalized zone object
   addZone: async (zone) => {
     try {
       const newZone = await apiCreate(zone);
@@ -34,13 +46,13 @@ export const useZoneStore = create((set, get) => ({
     }
   },
 
-  // Update an existing zone
-  updateZone: async (id, updates) => {
+  // Update an existing zone using zone_id (backend identifier)
+  updateZone: async (zoneId, updates) => {
     try {
-      const updatedZone = await apiUpdate(id, updates);
+      const updatedZone = await apiUpdate(zoneId, updates);
       set((state) => ({
         zones: state.zones.map((z) =>
-          z.id === id ? { ...z, ...updatedZone } : z
+          z.zone_id === zoneId ? { ...z, ...updatedZone } : z
         ),
       }));
       return updatedZone;
@@ -51,12 +63,12 @@ export const useZoneStore = create((set, get) => ({
     }
   },
 
-  // Delete a zone
-  deleteZone: async (id) => {
+  // Delete a zone using backend DELETE support
+  deleteZone: async (zoneId) => {
     try {
-      await apiDelete(id);
+      await apiDelete(zoneId);
       set((state) => ({
-        zones: state.zones.filter((z) => z.id !== id),
+        zones: state.zones.filter((z) => z.zone_id !== zoneId),
       }));
     } catch (error) {
       set({ error: error.message });
