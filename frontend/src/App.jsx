@@ -1,57 +1,64 @@
 import { useState } from "react";
-import { BrowserRouter as Router } from "react-router-dom";
-
 import TopNav from "./components/TopNav";
 import MapView from "./components/MapView";
 import TollPanel from "./components/TollPanel";
 import TollPaymentModal from "./components/TollPaymentModal";
 import SuccessModal from "./components/SuccessModal";
-
 import "./index.css";
 
 function App() {
-  const [activeZone] = useState({
-    id: "mock-zone-001",
-    name: "Nairobi CBD",
-    charge_amount: 200,
-    status: "unpaid"
-  });
+  const [activeZone, setActiveZone] = useState(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const handleTollDetected = (zone) => {
+    setActiveZone((prev) => {
+      // ✅ Do NOT overwrite a paid zone
+      if (prev?.zone_id === zone.zone_id) return prev;
+
+      return {
+        ...zone,
+        status: "unpaid"
+      };
+    });
+  };
+
+  const handlePaymentSuccess = () => {
+    setActiveZone((prev) => ({
+      ...prev,
+      status: "paid"
+    }));
+
+    setShowPayment(false);
+    setShowSuccess(true);
+  };
 
   return (
-    <Router>
+    <>
       <TopNav />
 
       <main className="app-shell">
         <section className="map-section">
-          <MapView />
+          <MapView onTollDetected={handleTollDetected} />
         </section>
 
         <section className="toll-section">
-          <TollPanel
-            zone={activeZone}
-            onMakePayment={() => setShowPaymentModal(true)}
-          />
+          {activeZone && <TollPanel zone={activeZone} onMakePayment={() => setShowPayment(true)} />}
         </section>
       </main>
 
-      {showPaymentModal && (
+      {showPayment && activeZone?.status !== "paid" && (
         <TollPaymentModal
           toll={activeZone}
-          onClose={() => setShowPaymentModal(false)}
-          onSuccess={() => {
-            setShowPaymentModal(false);
-            setShowSuccessModal(true);
-          }}
+          onClose={() => setShowPayment(false)}
+          onSuccess={handlePaymentSuccess}
         />
       )}
 
-      {showSuccessModal && (
-        <SuccessModal onDone={() => setShowSuccessModal(false)} />
+      {showSuccess && (
+        <SuccessModal onDone={() => setShowSuccess(false)} />
       )}
-    </Router>
+    </>
   );
 }
 

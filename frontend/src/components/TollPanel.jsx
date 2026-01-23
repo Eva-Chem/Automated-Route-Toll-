@@ -8,7 +8,7 @@ export default function TollPanel({ zone, onMakePayment }) {
 
         <div className="toll-row">
           <span className="label">Toll Zone</span>
-          <span className="value">{zone.name}</span>
+          <span className="value">{zone.zone_name}</span>
         </div>
 
         <div className="toll-row">
@@ -18,12 +18,16 @@ export default function TollPanel({ zone, onMakePayment }) {
 
         <div className="toll-row">
           <span className="label">Status</span>
-          <span className="status-pill unpaid">Unpaid</span>
+          <span className={`status-pill ${zone.status === "paid" ? "paid" : "unpaid"}`}>
+            {zone.status === "paid" ? "Paid" : "Unpaid"}
+          </span>
         </div>
 
-        <button className="primary-btn" onClick={onMakePayment}>
-          Make Payment
-        </button>
+        {zone.status !== "paid" && (
+          <button className="primary-btn" onClick={onMakePayment}>
+            Make Payment
+          </button>
+        )}
       </div>
     </div>
   );

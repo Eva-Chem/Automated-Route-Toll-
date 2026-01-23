@@ -1,7 +1,86 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 
 export default function TollPaymentModal({ toll, onClose, onSuccess }) {
   const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup polling when modal unmounts
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+      }
+    };
+  }, []);
+
+  const startPollingStatus = (checkoutRequestId) => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/payments/status/${checkoutRequestId}`
+        );
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        if (data.status === "paid") {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setLoading(false);
+          onSuccess(); // ✅ THIS now always fires
+        }
+
+        if (data.status === "failed") {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setLoading(false);
+          setError("Payment failed or was cancelled.");
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 3000);
+  };
+
+  const handlePayNow = async () => {
+    setError("");
+
+    if (phone.length !== 9) {
+      setError("Enter a valid Safaricom number");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/payments/stk-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: `254${phone}`,
+          amount: toll.charge_amount,
+          zone_id: toll.zone_id
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.response?.CheckoutRequestID) {
+        startPollingStatus(data.response.CheckoutRequestID);
+      } else {
+        setLoading(false);
+        setError("Unable to initiate payment.");
+      }
+    } catch (err) {
+      console.error("STK Push error:", err);
+      setLoading(false);
+      setError("Network error. Please try again.");
+    }
+  };
 
   return (
     <div style={overlay}>
@@ -9,35 +88,49 @@ export default function TollPaymentModal({ toll, onClose, onSuccess }) {
         <button style={closeBtn} onClick={onClose}>×</button>
 
         <h2>Confirm Toll Payment</h2>
+
         <p style={subtitle}>
           Enter your Safaricom number to receive an M-Pesa prompt.
         </p>
 
         <div style={summary}>
-          <span>{toll.name}</span>
-          <strong>KES {toll.charge_amount}</strong>
+          <span style={summaryText}>{toll.zone_name}</span>
+          <strong style={summaryText}>KES {toll.charge_amount}</strong>
         </div>
 
-        <label>Phone Number</label>
+        <label style={label}>Phone Number</label>
         <div style={phoneWrap}>
           <span style={prefix}>254</span>
           <input
             style={input}
             placeholder="7XXXXXXXX"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+            disabled={loading}
+            onChange={(e) =>
+              setPhone(e.target.value.replace(/\D/g, ""))
+            }
           />
         </div>
 
-        <button style={primaryBtn} onClick={onSuccess}>
-          Pay Now
+        {error && (
+          <p style={{ color: "#DC2626", marginBottom: "12px" }}>
+            {error}
+          </p>
+        )}
+
+        <button
+          style={primaryBtn}
+          onClick={handlePayNow}
+          disabled={loading}
+        >
+          {loading ? "Sending STK Push..." : "Pay Now"}
         </button>
       </div>
     </div>
   );
 }
 
-/* ===== styles ===== */
+/* ================= STYLES ================= */
 
 const overlay = {
   position: "fixed",
@@ -68,12 +161,28 @@ const closeBtn = {
   cursor: "pointer"
 };
 
-const subtitle = { color: "#6B7280", marginBottom: "16px" };
+const subtitle = {
+  color: "#6B7280",
+  marginBottom: "16px",
+  textAlign: "left"
+};
 
 const summary = {
   display: "flex",
   justifyContent: "space-between",
   marginBottom: "20px"
+};
+
+const summaryText = {
+  fontSize: "16px",
+  fontWeight: 600
+};
+
+const label = {
+  fontSize: "13px",
+  color: "#6B7280",
+  marginBottom: "6px",
+  display: "block"
 };
 
 const phoneWrap = {
