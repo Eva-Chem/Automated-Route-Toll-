@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone as apiDelete } from "../components/TollZones/tollZones.api";
+import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone as apiDelete } from "../components/TollZones/TollZones.api";
 
 /**
  * Zone Store
@@ -13,7 +13,7 @@ import { getZones, createZone as apiCreate, updateZone as apiUpdate, deleteZone 
  *
  * DELETE is supported by backend.
  */
-export const useZoneStore = create((set, get) => ({
+export const useZoneStore = create((set) => ({
   zones: [],
   loading: false,
   error: null,

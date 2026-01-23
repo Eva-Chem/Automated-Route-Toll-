@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "./auth.context";
+import { useAuth } from "./use-auth";
 import { ROLES } from "../constants/roles";
 
 /**

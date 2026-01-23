@@ -4,7 +4,7 @@ import AdminDashboard from "../admin/AdminDashboard";
 import TransactionsPage from "../admin/TransactionsPage";
 import OperatorDashboard from "../operator/OperatorDashboard";
 import TollZonesPage from "../components/TollZones/TollZonesPage";
-import { useAuth } from "../auth/auth.context";
+import { useAuth } from "../auth/use-auth";
 import Login from "../auth/Login";
 import { ROLES } from "../constants/roles";
 

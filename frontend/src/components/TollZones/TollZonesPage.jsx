@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import MapCanvas from "../../map/MapCanvas";
 import { useZoneStore } from "../../store/zone.store";
-import { useAuth } from "../../auth/auth.context";
+import { useAuth } from "../../auth/use-auth";
 import { ROLES } from "../../constants/roles";
 import { geoJSONToLatLngArray } from "../../utils/geo";
 
@@ -42,7 +42,6 @@ const modalStyles = {
 export default function TollZones() {
   const { user } = useAuth();
   const { zones, addZone, updateZone, deleteZone, fetchZones } = useZoneStore();
-  const [selectedId, setSelectedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingZone, setEditingZone] = useState(null);
   const [zoneToDelete, setZoneToDelete] = useState(null);
@@ -206,7 +205,6 @@ export default function TollZones() {
   };
 
   const isOperator = user?.role === ROLES.TOLL_OPERATOR;
-  const isAdmin = user?.role === ROLES.ADMIN;
 
   return (
     <DashboardLayout>

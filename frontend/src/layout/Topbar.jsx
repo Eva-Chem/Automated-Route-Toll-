@@ -1,4 +1,4 @@
-import { useAuth } from "../auth/auth.context";
+import { useAuth } from "../auth/use-auth";
 import { useNavigate } from "react-router-dom";
 
 export default function Topbar() {

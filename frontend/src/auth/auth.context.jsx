@@ -1,8 +1,7 @@
-import { createContext, useContext, useState } from "react";
+import { useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
-
-const AuthContext = createContext();
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -79,10 +78,4 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-};
+export default AuthProvider;
