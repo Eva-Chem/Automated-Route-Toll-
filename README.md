@@ -212,7 +212,7 @@ GET /api/tolls-history
    REACT_APP_GOOGLE_MAPS_API_KEY=<your-google-maps-api-key>
    ```
 
-6. Deployed Frontend for Driver App: https://automated-route-toll.vercel.app/
+6. **Deployed Frontend for Driver App:** https://automated-route-toll.vercel.app/
 
 ---
 
@@ -263,6 +263,7 @@ Educational & demonstration use only.
 **Automated Route Toll & Payment Tracker**
 
 For questions or support, please open an issue on GitHub.
+
 
 
 
