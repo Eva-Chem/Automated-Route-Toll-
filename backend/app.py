@@ -1,27 +1,45 @@
-from flask import Flask, jsonify
+"""
+Main Application Entry Point
+File: backend/app.py
+"""
+
+from flask import Flask
 from flask_cors import CORS
-from routes.toll_zones import toll_zones_bp
+from flask_jwt_extended import JWTManager
+from config import config
+from models.models import db
+import os
 
-def create_app():
+from routes.driver_toll_zones import driver_toll_zones_bp
+from routes.payments import payments_bp
+
+
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.getenv("FLASK_ENV", "development")
+
     app = Flask(__name__)
+    app.config.from_object(config.get(config_name, config["default"]))
 
-    # Enable CORS for frontend communication
+    db.init_app(app)
+    JWTManager(app)
     CORS(app)
 
     # Register routes
-    app.register_blueprint(toll_zones_bp)
+    app.register_blueprint(driver_toll_zones_bp)
+    app.register_blueprint(payments_bp)
 
-    # Health check route
-    @app.route("/api/health", methods=["GET"])
+    @app.route("/health", methods=["GET"])
     def health_check():
-        return jsonify({
-            "status": "ok",
-            "message": "Backend running"
-        }), 200
+        return {
+            "status": "healthy",
+            "message": "Toll Tracker API is running"
+        }, 200
 
     return app
 
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)

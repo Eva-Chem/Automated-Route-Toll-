@@ -1,12 +1,6 @@
 from shapely.geometry import Point, Polygon
 
-def is_point_inside_zone(lat, lng, polygon):
-    polygon_points = [
-        (point["lng"], point["lat"])
-        for point in polygon
-    ]
-
-    zone_polygon = Polygon(polygon_points)
-    vehicle_point = Point(lng, lat)
-
-    return zone_polygon.contains(vehicle_point)
+def check_point_in_zone(lat, lng, polygon_coords):
+    point = Point(lng, lat)  # x = lng, y = lat
+    polygon = Polygon([(lng, lat) for lat, lng in polygon_coords])
+    return polygon.contains(point)

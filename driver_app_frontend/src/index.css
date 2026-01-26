@@ -1,0 +1,39 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#root {
+  height: 100%;
+}
+
+.app-shell {
+  height: calc(100vh - 140px); /* hero height */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== MAP LAYER (KEEP BELOW MODALS) ===== */
+.map-section {
+  flex: 7;
+  min-height: 0;
+  position: relative;
+  z-index: 1; /* critical */
+}
+
+/* ===== TOLL INFO SECTION ===== */
+.toll-section {
+  flex: 3;
+  position: relative;
+  z-index: 2;
+}
+
+/* Static pages (About / Contact) */
+.static-page {
+  padding: 48px;
+  max-width: 900px;
+  margin: 0 auto;
+}

@@ -1,10 +1,21 @@
-import psycopg2
-import os
+# backend/db/database.py
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/toll_tracker"
-)
+db = SQLAlchemy()
+migrate = Migrate()
 
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URL)
+def init_db(app):
+    """Initialize the database with the Flask app."""
+    db.init_app(app)
+    migrate.init_app(app, db)
+    
+    # Import models here to register them with SQLAlchemy
+    # This must happen after db.init_app() but before create_all()
+    from db import models
+    
+    # Create tables in development/testing
+    with app.app_context():
+        db.create_all()
+    
+    return db
